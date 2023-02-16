@@ -1,0 +1,10 @@
+gzip -d entry01.weka.allclass.arff.gz
+gzip -d entry02.weka.allclass.arff.gz
+gzip -d entry03.weka.allclass.arff.gz
+gzip -d entry04.weka.allclass.arff.gz
+gzip -d entry05.weka.allclass.arff.gz
+gzip -d entry06.weka.allclass.arff.gz
+gzip -d entry07.weka.allclass.arff.gz
+gzip -d entry08.weka.allclass.arff.gz
+gzip -d entry09.weka.allclass.arff.gz
+gzip -d entry10.weka.allclass.arff.gz

@@ -1,0 +1,95 @@
+/Users/shuaif/miniforge3/envs/py38/bin/python /Users/shuaif/PycharmProjects/ood_flow_detection/test/test.py
+entry01.weka.allclass.arff
+entry02.weka.allclass.arff
+entry03.weka.allclass.arff
+entry04.weka.allclass.arff
+entry05.weka.allclass.arff
+entry06.weka.allclass.arff
+entry07.weka.allclass.arff
+entry08.weka.allclass.arff
+entry09.weka.allclass.arff
+entry10.weka.allclass.arff
+/Users/shuaif/miniforge3/envs/py38/lib/python3.8/site-packages/numpy/linalg/linalg.py:2556: RuntimeWarning: overflow encountered in multiply
+  s = (x.conj() * x).real
+tf.Tensor(
+[[9.9711167e-04 4.3005428e-01 6.6058647e-10 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [1.1347893e-04 7.0776805e-02 1.1347893e-11 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [1.0816456e-03 3.1489410e-02 1.9064004e-09 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ ...
+ [4.7813938e-04 1.2019228e-02 5.9767421e-12 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [9.3164439e-05 4.7665257e-02 1.1645554e-12 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [7.9966366e-04 6.4322942e-01 1.5993273e-10 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]], shape=(268611, 256), dtype=float32)
+tf.Tensor([0 0 0 ... 0 0 0], shape=(268611,), dtype=int32)
+tf.Tensor(
+[[1.0408295e-02 4.4555578e-02 1.1874838e-12 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [8.3603434e-02 3.5676202e-01 9.5383267e-12 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [1.0855572e-02 7.3341608e-02 9.4986262e-11 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ ...
+ [2.3566243e-04 5.1073170e-01 1.5779136e-09 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [8.6394269e-03 2.5216327e-03 1.0799284e-12 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [9.4880695e-03 2.7705163e-03 1.3046096e-10 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]], shape=(2183, 256), dtype=float32)
+tf.Tensor([1 1 1 ... 2 1 1], shape=(2183,), dtype=int32)
+ood simple scale : 2183
+Virtual Logit : ==================================
+
+weights and bias : -------------------
+[[ 4.0100255e+00 -8.0019468e-01 -1.1959534e+00 ... -5.3893262e-01
+   7.7557273e+00  2.5903535e+00]
+ [-3.3649223e+00 -2.8290472e+00  5.4987237e-02 ...  1.6640691e-01
+  -5.2952580e+00 -4.3406245e-01]
+ [-3.7174313e+00  1.6478143e+00  1.1477062e+00 ... -1.1623679e+00
+   1.0953959e-02  3.2683289e-01]
+ ...
+ [ 1.4340636e-01  8.7850313e+00  1.4226185e+00 ... -1.1774731e+00
+   3.3533700e+00 -3.2088497e+00]
+ [-2.5484114e+00 -2.5297883e+00  1.3933940e+00 ... -1.2641270e+00
+  -1.2007299e-01 -6.2962103e-01]
+ [ 5.3939681e+00  1.9838465e+00  2.1804001e+00 ... -6.7607230e-01
+   4.9246225e-04  7.5138032e-01]] (8, 256)
+[-0.9827471   0.5959418   0.33621305 -0.33786178  0.2584392   0.42132547
+  1.1554894  -1.5993397 ] (8,)
+2023-02-15 19:23:01.737172: W tensorflow/tsl/platform/profile_utils/cpu_utils.cc:128] Failed to get CPU frequency: 0 Hz
+2799/2799 [==============================] - 2s 793us/step
+choose DIM : 0
+computing principal space...
+computing alpha...
+alpha=5.8538
+Virtual Logit: MULTIMEDIA_P2P_INTERACTIVE_GAMES_ auroc 75.65%, fpr 73.25%
+mean auroc 75.65%, 73.25%
+choose DIM : 40
+computing principal space...
+computing alpha...
+alpha=11383.7204
+Virtual Logit: MULTIMEDIA_P2P_INTERACTIVE_GAMES_ auroc 83.07%, fpr 58.63%
+mean auroc 83.07%, 58.63%
+choose DIM : 80
+computing principal space...
+computing alpha...
+alpha=170481.4943
+Virtual Logit: MULTIMEDIA_P2P_INTERACTIVE_GAMES_ auroc 86.02%, fpr 53.50%
+mean auroc 86.02%, 53.50%
+choose DIM : 120
+computing principal space...
+computing alpha...
+alpha=307627.5752
+Virtual Logit: MULTIMEDIA_P2P_INTERACTIVE_GAMES_ auroc 86.69%, fpr 52.04%
+mean auroc 86.69%, 52.04%
+choose DIM : 160
+computing principal space...
+computing alpha...
+alpha=372870.3721
+Virtual Logit: MULTIMEDIA_P2P_INTERACTIVE_GAMES_ auroc 85.60%, fpr 57.72%
+mean auroc 85.60%, 57.72%
+-----
