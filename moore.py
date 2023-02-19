@@ -132,7 +132,7 @@ def splits(model_set_label, ood_set_label, filename):
 
 
 # data nomalization
-num_classes, num_pixels, train_labels, ood_labels = init(1)
+num_classes, num_pixels, train_labels, ood_labels = init(2)
 # train_x,train_y = data_prepross(['entry01.weka.allclass.arff',])
 total_x, total_y, ood_x, ood_y = splits(train_labels, ood_labels, [
     'entry01.weka.allclass.arff', 'entry02.weka.allclass.arff', 'entry03.weka.allclass.arff',

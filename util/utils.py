@@ -39,6 +39,12 @@ def origin_data(x_train, y_train, x_test, y_test, title='default'):
         fp.write(tensor_to_str(y_test))
 
 
+def read_features():
+    with open('./inputs/moore_dataset/features.txt', 'r') as f:
+        features = f.readlines()
+    return features
+
+
 def list_to_str(lis):
     res = ''
     for i in lis:
@@ -158,4 +164,18 @@ def plt_index_of_model(epochs, loss, accuracy, val_loss, val_accuracy):
     plt.xlabel('epochs')
     plt.ylabel('value')
     plt.legend()
+    plt.show()
+
+
+def plt_feat_importance(model, dim):
+    features = read_features() # 248 维
+    features += ["Placeholder1", "Placeholder2", "Placeholder3", "Placeholder4", "Placeholder5", "Placeholder6", "Placeholder7", "Placeholder8", ]
+    importances = model.feature_importances_[:dim]
+    indices = np.argsort(importances)[::-1]
+    num_features = len(importances)
+    plt.figure()
+    plt.title("Feature importances")
+    plt.bar(range(num_features), importances[indices], color="blue", align="center")
+    plt.xticks(range(num_features), [features[i] for i in indices], rotation=30)
+    plt.xlim([-1, num_features])
     plt.show()
