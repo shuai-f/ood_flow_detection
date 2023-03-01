@@ -1,12 +1,16 @@
+import joblib
 import tensorflow as tf
 import numpy as np
 import time
 
-from sklearn.metrics import precision_recall_fscore_support
+import torch
+from keras.callbacks import Callback
+from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 from tensorflow import keras
 from keras.models import Sequential
 from keras import layers
 from sklearn import metrics
+from sklearn.metrics import f1_score, precision_score, recall_score
 from sklearn.svm import SVC
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
@@ -25,8 +29,32 @@ ood_y = []
 train_labels = []
 ood_labels = []
 input_npy_moore_dir = './inputs/npy/moore/'
+weight_dir = './output/weight/'
 features = read_features()
 
+class Metrics(Callback):
+    def on_train_begin(self, logs=None):
+        if logs is None:
+            logs = {}
+        self.val_f1s = []
+        self.val_recalls = []
+        self.val_precisions = []
+
+    def on_epoch_end(self, epoch, logs=None):
+        if logs is None:
+            logs = {}
+        val_predict = (np.asarray(self.model.predict(self.model.validation_data[0]))).round()
+        val_targ = self.model.validation_data[1]
+        _val_f1 = f1_score(val_targ, val_predict)
+        _val_recall = recall_score(val_targ, val_predict)
+        _val_precision = precision_score(val_targ, val_predict)
+        self.val_f1s.append(_val_f1)
+        self.val_recalls.append(_val_recall)
+        self.val_precisions.append(_val_precision)
+        print(" — val_f1: %f — val_precision: %f — val_recall %f" % (_val_f1, _val_precision, _val_recall))
+        return
+
+metrics_ = Metrics()
 
 def read_data(oodLabels=None):
     if oodLabels is None:
@@ -59,7 +87,6 @@ def config(numClass, numPixels, ood_X, ood_Y, train_Labels, ood_Labels):
     ood_y = ood_Y
     train_labels = train_Labels
     ood_labels = ood_Labels
-
 
 def simple_CNNmodel():
     model = keras.models.Sequential([
@@ -108,7 +135,7 @@ def simple_CNN(train_x, train_y, test_x, test_y):
     # 模型训练
     # loss：训练集损失值，accuracy:训练集准确率，val_loss:测试集损失值，val_accruacy:测试集准确率
     history = model.fit(X_train, train_y, validation_data=(X_test, test_y), epochs=epochs, batch_size=batch_size,
-                        verbose=2)
+                        verbose=2, callbacks=[metrics_])
     # 模型评估 (loss, accuracy)
     scores = model.evaluate(X_test, test_y, verbose=0)
     t2 = time.time()
@@ -131,7 +158,6 @@ def simple_CNN(train_x, train_y, test_x, test_y):
                        history.history['val_accuracy'])
     plot_confusion_matrix("CNN", test_y, pred_y, train_labels)
     return scores, pred_y
-
 
 def load_CNN(train_x, train_y, test_x, test_y, ood_X=None, ood_Y=None):
     """
@@ -157,11 +183,32 @@ def load_CNN(train_x, train_y, test_x, test_y, ood_X=None, ood_Y=None):
     # Baseline评估
     # Msp(test_x, test_y, ood_X, ood_Y, model, train_labels, ood_labels)
 
+    # 获取模型权重和偏置
+    print("\nweights and bias : -------------------")
+    weight_Dense_1, bias_Dense_1 = model.get_layer(index=-2).get_weights()
+    # print(weight_Dense_1.shape, bias_Dense_1.shape)
+    weight_Dense_2, bias_Dense_2 = model.get_layer(index=-1).get_weights()
+    # print(weight_Dense_2.shape, bias_Dense_2.shape)
+    # W ∈ RN×C
+    w = weight_Dense_1 @ weight_Dense_2
+    w = w.T
+    # b ∈ RC
+    b = bias_Dense_1 @ weight_Dense_2 + bias_Dense_2
+    print(w, w.shape)
+    print(b, b.shape)
+
     # Virtual Logit评估
-    VirtualLogit(ood_X, ood_Y, train_x, train_y, test_x, test_y, model, train_labels, ood_labels)
+    VirtualLogit(ood_X, ood_Y, train_x, train_y, test_x, test_y, model, w, b, train_labels, ood_labels)
 
     return
 
+def lmcl_loss(y_true, logits, margin=0.35, scale=30):
+    print(y_true, logits)
+    print(y_true.shape, logits.shape)
+    logits = y_true * (logits - margin) + (1 - y_true) * logits
+    logits = torch.softmax(logits, dim=1)
+
+    return logits
 
 def contrast_learning_CNN():
     """
@@ -183,21 +230,40 @@ def contrast_learning_CNN():
     # 训练样本结果
     predict_y = model.predict(X_train)
     pred_y = np.argmax(predict_y, axis=1)
+    accuracy = accuracy_score(train_y, pred_y, )
+    print("accuracy : %.2f%%" % (accuracy * 100))
     # 混淆对
     res = [i for i in range(len(pred_y)) if pred_y[i] != train_y[i]]
-    print("src class : ")
-    print([train_labels[train_y[i]] for i in res])
-    print("tgt class : ")
-    print([train_labels[pred_y[i]] for i in res])
+    print("src -> tgt: ")
+    print([(train_labels[train_y[i]], train_labels[pred_y[i]]) for i in res])
+    # 容易混淆类别
+    confused_labels = set()
+    for i in res:
+        confused_labels.add(train_y[i])
+        confused_labels.add(pred_y[i])
+    print("confused label set :")
+    print(confused_labels)  # all 混淆
+    for i in range(train_y.shape[0]):  # 行索引
+        if train_y[i] not in confused_labels:
+            part_1 = X_train[0:i - 1, :]
+            part_2 = X_train[i + 1:, :]
+            X_train = tf.concat([part_1, part_2], 0)
+
+    epochs = 5
+    batch_size = 128
+    model.compile(loss=lmcl_loss, optimizer='adam', metrics=[tf.keras.metrics.Accuracy(), tf.keras.metrics.AUC(), tf.keras.metrics.Precision(), tf.keras.metrics.Recall()])
+    history = model.fit(X_train, train_y, validation_data=(X_test, test_y), epochs=epochs, batch_size=batch_size,
+                        verbose=2, callbacks=[metrics_])
 
     # predict函数：训练后返回一个概率值数组，此数组的大小为n·k，第i行第j列上对应的数值代表模型对此样本属于某类标签的概率值，行和为1
     predict_y = model.predict(X_test)
     # argmax是一种函数，是对函数求参数(集合)的函数。当我们有另一个函数y=f(x)时，若有结果x0= argmax(f(x))，则表示当函数f(x)取x=x0的时候，得到f(x)取值范围的最大值；若有多个点使得f(x)取得相同的最大值，那么argmax(f(x))的结果就是一个点集。
     pred_y = np.argmax(predict_y, axis=1)
+    accuracy = accuracy_score(test_y, pred_y, )
+    print("accuracy : %.2f%%" % (accuracy * 100))
 
     # plot_confusion_matrix("CNN", test_y, pred_y, train_labels)
     return pred_y
-
 
 ####################################################
 ##                                                ##
@@ -215,6 +281,7 @@ def baseline(train_x, train_y, test_x, test_y):
     :param test_y:
     :return:
     """
+
     def baseline_model():
         model = Sequential()
 
@@ -243,7 +310,6 @@ def baseline(train_x, train_y, test_x, test_y):
     plot_confusion_matrix("BP -- Baseline", test_y, pred_y)
     return scores, pred_y
 
-
 def Bayes(trainData, trainLabel, testData, testLabel):
     t1 = time.time()
     mnb = GaussianNB()  #
@@ -260,14 +326,17 @@ def Bayes(trainData, trainLabel, testData, testLabel):
 def DecisionTr(trainData, trainLabel, testData, testLabel):
     t1 = time.time()
     # 数据
-    model = DecisionTreeClassifier()
+    model = DecisionTreeClassifier(class_weight='balanced')
     model.fit(trainData, trainLabel)
     predicted = model.predict(testData)
-    score = metrics.accuracy_score(testLabel, predicted)
+    score = metrics_.accuracy_score(testLabel, predicted)
     t2 = time.time()
     precision, recall, F1, _ = precision_recall_fscore_support(testLabel, predicted, average="micro")
     print("精准率: {0:.2f}, 召回率: {1:.2f}, F1分数: {2:.2f}".format(precision, recall, F1))
-    plt_feat_importance(model, 20)
+    plt_feat_importance(model, 15)
+    # 模型保存
+    joblib.dump(model, weight_dir + 'DecisionTree.pkl')
+
     print(t2 - t1, score)
     plot_confusion_matrix("Decision Tree", testLabel, predicted, train_labels)
 
@@ -276,7 +345,7 @@ def SVM(trainData, trainLabel, testData, testLabel):
     clf = SVC()
     clf.fit(trainData, trainLabel)
     svmPredict = clf.predict(testData)
-    svmScore = metrics.accuracy_score(testLabel, svmPredict)
+    svmScore = metrics_.accuracy_score(testLabel, svmPredict)
     t2 = time.time()
     print(t2 - t1, svmScore)
     plot_confusion_matrix("SVM", testLabel, svmPredict)
@@ -286,7 +355,7 @@ def Knn(trainData, trainLabel, testData, testLabel):
     knn = KNeighborsClassifier()
     knn.fit(trainData, trainLabel)
     knnPredict = knn.predict(testData)
-    knnscore = metrics.accuracy_score(testLabel, knnPredict)
+    knnscore = metrics_.accuracy_score(testLabel, knnPredict)
     t2 = time.time()
     print(t2 - t1, knnscore)
     plot_confusion_matrix("KNN", testLabel, knnPredict)
@@ -296,7 +365,7 @@ def RandomForest(trainData, trainLabel, testData, testLabel):
     rf = RandomForestClassifier()
     rf.fit(trainData, trainLabel)
     rf_predict = rf.predict(testData)
-    rf_score = metrics.accuracy_score(testLabel, rf_predict)
+    rf_score = metrics_.accuracy_score(testLabel, rf_predict)
     t2 = time.time()
     precision, recall, F1, _ = precision_recall_fscore_support(testLabel, rf_predict, average="binary")
     print("精准率: {0:.2f}. 召回率: {1:.2f}, F1分数: {2:.2f}".format(precision, recall, F1))

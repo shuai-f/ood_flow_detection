@@ -1,0 +1,212 @@
+/Users/shuaif/miniforge3/envs/py38/bin/python /Users/shuaif/PycharmProjects/ood_flow_detection/test/test.py
+entry01.weka.allclass.arff
+entry02.weka.allclass.arff
+entry03.weka.allclass.arff
+entry04.weka.allclass.arff
+entry05.weka.allclass.arff
+entry06.weka.allclass.arff
+entry07.weka.allclass.arff
+entry08.weka.allclass.arff
+entry09.weka.allclass.arff
+entry10.weka.allclass.arff
+/Users/shuaif/miniforge3/envs/py38/lib/python3.8/site-packages/numpy/linalg/linalg.py:2556: RuntimeWarning: overflow encountered in multiply
+  s = (x.conj() * x).real
+tf.Tensor(
+[[9.9711167e-04 4.3005428e-01 6.6058647e-10 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [1.1347893e-04 7.0776805e-02 1.1347893e-11 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [1.0816456e-03 3.1489410e-02 1.9064004e-09 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ ...
+ [4.7813938e-04 1.2019228e-02 5.9767421e-12 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [9.3164439e-05 4.7665257e-02 1.1645554e-12 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [7.9966366e-04 6.4322942e-01 1.5993273e-10 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]], shape=(268611, 256), dtype=float32)
+tf.Tensor([0 0 0 ... 0 0 0], shape=(268611,), dtype=int32)
+tf.Tensor(
+[[1.0408295e-02 4.4555578e-02 1.1874838e-12 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [8.3603434e-02 3.5676202e-01 9.5383267e-12 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [1.0855572e-02 7.3341608e-02 9.4986262e-11 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ ...
+ [2.3566243e-04 5.1073170e-01 1.5779136e-09 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [8.6394269e-03 2.5216327e-03 1.0799284e-12 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [9.4880695e-03 2.7705163e-03 1.3046096e-10 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]], shape=(2183, 256), dtype=float32)
+tf.Tensor([1 1 1 ... 2 1 1], shape=(2183,), dtype=int32)
+ood simple scale : 2183
+
+weights and bias : -------------------
+[[-4.8842306   1.3905448   0.13316037 ...  3.2099123   0.49291494
+  -0.04919078]
+ [-2.6971085   3.6391602   0.54955083 ... -2.4211884  -0.09433623
+   0.02456462]
+ [10.243993   -3.3846614  -1.9682107  ...  2.9100378   0.10142545
+  -0.04304009]
+ ...
+ [ 5.099879   -4.5988626   5.4078403  ... -1.4437345  -0.04786485
+  -0.20390815]
+ [-1.2700703  -3.3700066   1.5121537  ...  0.4489836  -0.04098248
+   0.29098377]
+ [-2.235736   -7.747101   -1.3336759  ... -5.7587123   0.46406174
+  -0.09859334]] (8, 256)
+[-0.49770162 -0.67207277 -0.22070855 -0.1943558   0.41158158 -1.0099214
+  0.99050266 -0.6111508 ] (8,)
+ood_x_numpy shape:
+(2183, 256)
+(256,)
+1 [[1.0408295e-02 4.4555578e-02 1.1874838e-12 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [8.3603434e-02 3.5676202e-01 9.5383267e-12 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [1.0855572e-02 7.3341608e-02 9.4986262e-11 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ ...
+ [1.1039397e-02 4.5503017e-02 2.7598493e-11 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [8.6394269e-03 2.5216327e-03 1.0799284e-12 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [9.4880695e-03 2.7705163e-03 1.3046096e-10 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]] (1652, 256)
+0 [[1.8937364e-02 3.3907544e-02 2.5515428e-09 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [1.8934663e-02 3.6055531e-02 2.4833733e-09 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [1.8922975e-02 3.8049243e-02 2.6258382e-09 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ ...
+ [2.6613625e-03 1.5069935e-03 1.3104293e-10 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [1.4994186e-02 8.8058962e-03 2.1544915e-09 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [5.1197767e-02 3.0159473e-02 7.2648576e-09 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]] (421, 256)
+2 [[1.4167027e-04 2.4360847e-02 6.4395577e-12 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [1.4009797e-04 2.5789490e-01 4.4576627e-11 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [4.9098355e-05 6.2056049e-03 0.0000000e+00 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ ...
+ [1.5339046e-04 3.0874014e-01 7.1117395e-10 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [1.0415067e-04 2.7065134e-01 1.8113159e-11 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [2.3566243e-04 5.1073170e-01 1.5779136e-09 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]] (102, 256)
+3 [[5.9933751e-03 4.7083138e-03 7.8069479e-10 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [1.1045411e-02 2.6081016e-02 1.1643311e-09 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [5.7743439e-03 1.3644561e-02 3.2902244e-12 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ ...
+ [2.4532580e-03 4.1362909e-03 0.0000000e+00 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [5.8476708e-04 5.5977702e-04 0.0000000e+00 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [2.4500391e-03 4.4449712e-03 0.0000000e+00 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]] (8, 256)
+computing logits
+computing softmax...
+MSP : ==============================
+MSP: P2P auroc 64.01%, fpr 84.14%
+MSP: MULTIMEDIA auroc 67.53%, fpr 88.12%
+MSP: INTERACTIVE auroc 55.94%, fpr 92.16%
+MSP: GAMES auroc 68.87%, fpr 100.00%
+MaxLogit : ============================
+MaxLogit: P2P auroc 59.25%, fpr 96.97%
+MaxLogit: MULTIMEDIA auroc 37.54%, fpr 99.76%
+MaxLogit: INTERACTIVE auroc 57.39%, fpr 97.06%
+MaxLogit: GAMES auroc 61.65%, fpr 100.00%
+Energy : ============================
+Energy: P2P auroc 55.65%, fpr 97.46%
+Energy: MULTIMEDIA auroc 33.62%, fpr 99.52%
+Energy: INTERACTIVE auroc 54.98%, fpr 97.06%
+Energy: GAMES auroc 58.70%, fpr 100.00%
+Energy+React : ============================
+clip quantile 0.99, clip 0.3696
+Energy+React: P2P auroc 53.39%, fpr 97.40%
+Energy+React: MULTIMEDIA auroc 34.45%, fpr 97.62%
+Energy+React: INTERACTIVE auroc 51.03%, fpr 95.10%
+Energy+React: GAMES auroc 61.54%, fpr 87.50%
+Residual : ============================
+choose DIM : 0
+computing principal space...
+Residual: MULTIMEDIA auroc 52.20%, fpr 97.94%
+Residual: P2P auroc 82.68%, fpr 97.62%
+Residual: INTERACTIVE auroc 41.35%, fpr 94.12%
+Residual: GAMES auroc 44.04%, fpr 100.00%
+choose DIM : 40
+computing principal space...
+Residual: MULTIMEDIA auroc 76.18%, fpr 76.63%
+Residual: P2P auroc 98.17%, fpr 8.31%
+Residual: INTERACTIVE auroc 91.36%, fpr 47.06%
+Residual: GAMES auroc 83.36%, fpr 62.50%
+choose DIM : 80
+computing principal space...
+Residual: MULTIMEDIA auroc 80.78%, fpr 65.74%
+Residual: P2P auroc 96.53%, fpr 22.33%
+Residual: INTERACTIVE auroc 92.50%, fpr 43.14%
+Residual: GAMES auroc 86.26%, fpr 75.00%
+choose DIM : 120
+computing principal space...
+Residual: MULTIMEDIA auroc 82.45%, fpr 62.41%
+Residual: P2P auroc 96.75%, fpr 15.20%
+Residual: INTERACTIVE auroc 90.67%, fpr 52.94%
+Residual: GAMES auroc 87.56%, fpr 75.00%
+choose DIM : 160
+computing principal space...
+Residual: MULTIMEDIA auroc 81.07%, fpr 67.86%
+Residual: P2P auroc 96.44%, fpr 32.30%
+Residual: INTERACTIVE auroc 90.26%, fpr 54.90%
+Residual: GAMES auroc 88.49%, fpr 75.00%
+Virtual Logit : ==================================
+choose DIM : 0
+computing principal space...
+computing alpha...
+alpha=3.9858
+Virtual Logit: MULTIMEDIA auroc 55.85%, fpr 97.58%
+Virtual Logit: P2P auroc 34.00%, fpr 99.52%
+Virtual Logit: INTERACTIVE auroc 54.92%, fpr 97.06%
+Virtual Logit: GAMES auroc 58.67%, fpr 100.00%
+choose DIM : 40
+computing principal space...
+computing alpha...
+alpha=7718.4541
+Virtual Logit: MULTIMEDIA auroc 75.59%, fpr 76.88%
+Virtual Logit: P2P auroc 97.65%, fpr 8.79%
+Virtual Logit: INTERACTIVE auroc 90.69%, fpr 49.02%
+Virtual Logit: GAMES auroc 82.16%, fpr 50.00%
+choose DIM : 80
+computing principal space...
+computing alpha...
+alpha=111664.3175
+Virtual Logit: MULTIMEDIA auroc 81.42%, fpr 66.77%
+Virtual Logit: P2P auroc 95.83%, fpr 28.27%
+Virtual Logit: INTERACTIVE auroc 92.15%, fpr 46.08%
+Virtual Logit: GAMES auroc 84.09%, fpr 75.00%
+choose DIM : 120
+computing principal space...
+computing alpha...
+alpha=212725.3435
+Virtual Logit: MULTIMEDIA auroc 83.01%, fpr 64.04%
+Virtual Logit: P2P auroc 96.05%, fpr 17.10%
+Virtual Logit: INTERACTIVE auroc 90.21%, fpr 54.90%
+Virtual Logit: GAMES auroc 84.69%, fpr 75.00%
+choose DIM : 160
+computing principal space...
+computing alpha...
+alpha=255774.5136
+Virtual Logit: MULTIMEDIA auroc 81.69%, fpr 68.46%
+Virtual Logit: P2P auroc 95.68%, fpr 34.44%
+Virtual Logit: INTERACTIVE auroc 89.78%, fpr 54.90%
+Virtual Logit: GAMES auroc 85.66%, fpr 75.00%
+-----

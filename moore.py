@@ -114,6 +114,7 @@ def splits(model_set_label, ood_set_label, filename):
                 # 均值填充，加高斯白噪声
                 # x = [float(j) for j in i.split(',')[:-1]] + [meana] * 8 + np.random.normal(0, 1, 256)
                 x = [float(j) for j in i.split(',')[:-1]] + [0] * 8
+                x[0], x[1] = 0.0, 0.0
                 # x =x.tolist()
                 y = i.split(',')[-1].replace('FTP-CO0TROL', 'FTP-CONTROL')
                 y = y.replace('I0TERACTIVE', 'INTERACTIVE')

@@ -1,96 +1,159 @@
-#
-# # 自采集数据流量
-#
-# import os
-# import time
-#
-# import tensorflow as tf
-# from sklearn.model_selection import train_test_split
-#
-# from util import ml
-# from util.ml import baseline, simple_CNN, Bayes, DecisionTr, Knn, SVM, RandomForest, lstm
-# from util.utils import plt_image
-#
-# # 自建数据集
-#
-# labels = ['txsp',]
-#
-# # Moore default configuration
-# num_classes = 12
-# num_pixels = 256
-#
-# # 数据预处理
-# # read the file,change 'Y,N,?,', translate to tensor
-# def data_preprocess(filename):
-#     X, Y = [], []
-#     for f in filename:
-#         print(f)
-#         with open(os.getcwd() + '/inputs/self_dataset/' + f, 'r') as file:
-#
-#             for n, i in enumerate(file.readlines()[253:]):
-#                 # print(n,i)
-#                 i = i.replace('Y', '1')
-#                 i = i.replace('N', '0')
-#                 spl = i.split(',')
-#                 if spl.count('?') > 8:
-#                     continue
-#                 i = i.replace('\n', '')
-#                 fz = [float(f) for f in i.split(',')[:-1] if f != '?']
-#                 # 每一个样本占248维
-#                 meana = sum(fz) / len(fz)
-#                 i = i.replace('?', str(0))
-#                 # 均值填充，加高斯白噪声
-#                 # x = [float(j) for j in i.split(',')[:-1]] + [meana] * 8 + np.random.normal(0, 1, 256)
-#                 x = [float(j) for j in i.split(',')[:-1]] + [0] * 8
-#                 # x =x.tolist()
-#                 y = i.split(',')[-1].replace('FTP-CO0TROL', 'FTP-CONTROL')
-#                 y = y.replace('I0TERACTIVE', 'INTERACTIVE')
-#                 y = labels.index(y)
-#                 X.append(x)
-#                 Y.append(y)
-#             file.close()
-#     return X, Y
-#
-#
-# # data nomalization
-# # train_x,train_y = data_prepross(['entry01.weka.allclass.arff',])
-# start = time.time()
-# total_x, total_y = data_preprocess([
-#      'entry01.weka.allclass.arff', 'entry02.weka.allclass.arff', 'entry03.weka.allclass.arff',
-#      'entry04.weka.allclass.arff','entry05.weka.allclass.arff', 'entry06.weka.allclass.arff',
-#      'entry07.weka.allclass.arff', 'entry08.weka.allclass.arff','entry09.weka.allclass.arff',
-#      'entry10.weka.allclass.arff',])
-# end = time.time()
-# print()
-#
-# train_x, test_x, train_y, test_y = train_test_split(total_x, total_y, test_size=0.25, random_state=0)
-# train_x = tf.convert_to_tensor(train_x, dtype=tf.float32)
-# train_y = tf.convert_to_tensor(train_y, dtype=tf.int32)
-# test_x = tf.convert_to_tensor(test_x, dtype=tf.float32)
-# test_y = tf.convert_to_tensor(test_y, dtype=tf.int32)
-# train_x = tf.keras.utils.normalize(train_x, axis=1)
-# test_x = tf.keras.utils.normalize(test_x, axis=1)
-# print(train_x)
-# print(train_y)
-#
-# if __name__ == '__main__':
-#     ml.config(numClass=num_classes, numPixels=num_pixels)
-#     print("\nBaseline------------------------------------------------\n")
-#     baseline(train_x, train_y, test_x, test_y)
-#     print("\nCNN------------------------------------------------\n")
-#     simple_CNN(train_x, train_y, test_x, test_y)
-#     print("\nBayes------------------------------------------------\n")
-#     Bayes(train_x, train_y, test_x, test_y)
-#     print("\nDecisionTr------------------------------------------------\n")
-#     DecisionTr(train_x, train_y, test_x, test_y)
-#     print("\nKNN------------------------------------------------\n")
-#     Knn(train_x.numpy(),train_y.numpy(),test_x.numpy(),test_y.numpy())
-#     print("\nSVM------------------------------------------------\n")
-#     SVM(train_x, train_y, test_x, test_y)
-#     print("\nBayes------------------------------------------------\n")
-#     RandomForest(train_x, train_y, test_x, test_y)
-#     print("\n灰度------------------------------------------------\n")
-#     plt_image(train_x, train_y)
-#     print("\n混淆矩阵------------------------------------------------\n")
-#     print("\nLSTM------------------------------------------------\n")
-#     lstm(train_x, train_y, test_x, test_y)
+
+import torch
+import torch.nn as nn
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+import numpy as np
+from transformers import BertModel, BertTokenizer
+import torch.nn.functional as F
+
+def pair_cosine_similarity(x, x_adv, eps=1e-8):
+    n = x.norm(p=2, dim=1, keepdim=True)
+    n_adv = x_adv.norm(p=2, dim=1, keepdim=True)
+    return (x @ x.t()) / (n * n.t()).clamp(min=eps), (x_adv @ x_adv.t()) / (n_adv * n_adv.t()).clamp(min=eps), (x @ x_adv.t()) / (n * n_adv.t()).clamp(min=eps)
+
+def nt_xent(x, x_adv, mask, cuda=True, t=0.1):
+    x, x_adv, x_c = pair_cosine_similarity(x, x_adv)
+    x = torch.exp(x / t)    # (batchsize,batchsize)  # sim(xi,xj)
+    x_adv = torch.exp(x_adv / t)    # (batchsize,batchsize) # sim(xadvi,xadvj)
+    x_c = torch.exp(x_c / t)    # (batchsize,batchsize) # sim(xi,xadvj)
+    mask_count = mask.sum(1)    #(batchsize)
+    mask_reverse = (~(mask.bool())).long()
+    if cuda:
+        dis = (x * (mask - torch.eye(x.size(0)).long().cuda()) + x_c * mask) / (x.sum(1) + x_c.sum(1) - torch.exp(torch.tensor(1 / t))) + mask_reverse
+        dis_adv = (x_adv * (mask - torch.eye(x.size(0)).long().cuda()) + x_c.T * mask) / (x_adv.sum(1) + x_c.sum(0) - torch.exp(torch.tensor(1 / t))) + mask_reverse
+    else:
+        dis = (x * (mask - torch.eye(x.size(0)).long()) + x_c * mask) / (x.sum(1) + x_c.sum(1) - torch.exp(torch.tensor(1 / t))) + mask_reverse # (batchsize,batchsize)
+        dis_adv = (x_adv * (mask - torch.eye(x.size(0)).long()) + x_c.T * mask) / (x_adv.sum(1) + x_c.sum(0) - torch.exp(torch.tensor(1 / t))) + mask_reverse # (batchsize,batchsize)
+    loss = (torch.log(dis).sum(1) + torch.log(dis_adv).sum(1)) / mask_count
+    return -loss.mean()
+
+
+class BiLSTM(nn.Module):
+    def __init__(self, embedding_matrix, HIDDEN_DIM, NUM_LAYERS, norm_coef, n_class_seen,  lmcl=True, use_cuda=True, use_bert=False, rcl_cont=False,scl_cont=False):
+        super(BiLSTM, self).__init__()
+        self.hidden_dim = HIDDEN_DIM
+        self.num_layers = NUM_LAYERS
+        self.output_dim = n_class_seen
+        self.use_bert = use_bert
+        self.scl_cont = scl_cont
+        self.rcl_cont = rcl_cont
+        self.norm_coef = norm_coef
+        self.use_cuda = 'cuda' if use_cuda else 'cpu'
+        if self.use_bert:
+            print('Loading Bert...')
+            self.bert_model = BertModel.from_pretrained('bert-base-uncased').to(self.use_cuda)
+            self.bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+            self.rnn = nn.GRU(input_size=768, hidden_size=self.hidden_dim,
+                              num_layers=self.num_layers,
+                              batch_first=True, bidirectional=True).to(self.use_cuda)
+            for name, param in self.bert_model.named_parameters():
+                if "encoder.layer.11" in name or "pooler" in name:
+                    param.requires_grad = True
+        else:
+            self.embedding = nn.Embedding(embedding_matrix.shape[0], embedding_matrix.shape[1],
+                                          _weight=torch.from_numpy(embedding_matrix))
+            self.rnn = nn.GRU(input_size=embedding_matrix.shape[1], hidden_size=self.hidden_dim, num_layers=self.num_layers,
+                              batch_first=True, bidirectional=True).to(self.use_cuda)
+        self.fc = nn.Linear(self.hidden_dim * 2, self.output_dim).to(self.use_cuda)
+        self.dropout = nn.Dropout(p=0.5)
+        self.lmcl = lmcl
+
+    def get_embedding(self, seq):
+        seq_embed = self.embedding(seq)
+        seq_embed = self.dropout(seq_embed)
+        seq_embed = torch.tensor(seq_embed, dtype=torch.float32, requires_grad=True).cuda()
+        return seq_embed
+
+    def lmcl_loss(self, probs, label, margin=0.35, scale=30):
+        probs = label * (probs - margin) + (1 - label) * probs
+        probs = torch.softmax(probs, dim=1)
+        return probs
+
+    def forward(self, seq, label=None, mode='ind_pre'):
+        if mode in ['ind_pre','finetune']:
+            if self.use_bert:
+                seq_embed = self.bert_model(**self.bert_tokenizer(seq, return_tensors='pt', padding=True, truncation=True).to(self.use_cuda))[0]
+                seq_embed = self.dropout(seq_embed)
+                seq_embed = seq_embed.clone().detach().requires_grad_(True).float()
+            else:
+                seq_embed = self.embedding(seq)
+                seq_embed = self.dropout(seq_embed)
+                seq_embed = seq_embed.clone().detach().requires_grad_(True).float()
+            _, ht = self.rnn(seq_embed)
+            ht = torch.cat((ht[0].squeeze(0), ht[1].squeeze(0)), dim=1)
+            logits = self.fc(ht)
+            if self.lmcl:
+                probs = self.lmcl_loss(logits, label)
+            else:
+                probs = torch.softmax(logits, dim=1)
+            # 算 lcml loss
+            ce_loss = torch.sum(torch.mul(-torch.log(probs), label))
+            if mode == 'finetune':
+                return ce_loss
+            elif mode == "ind_pre": # RCL
+                seq_embed.retain_grad()  # we need to get gradient w.r.t embeddings
+                ce_loss.backward(retain_graph=True)
+                unnormalized_noise = seq_embed.grad.detach_()
+                for p in self.parameters():
+                    if p.grad is not None:
+                        p.grad.detach_()
+                        p.grad.zero_()
+                norm = unnormalized_noise.norm(p=2, dim=-1)
+                normalized_noise = unnormalized_noise / (norm.unsqueeze(dim=-1) + 1e-10)  # add 1e-10 to avoid NaN
+                noise_embedding = seq_embed + self.norm_coef * normalized_noise
+                _, h_adv = self.rnn(noise_embedding, None)
+                h_adv = torch.cat((h_adv[0].squeeze(0), h_adv[1].squeeze(0)), dim=1)
+                label_mask = torch.mm(label,label.T).bool().long()
+                # SCL
+                sup_cont_loss = nt_xent(ht, h_adv, label_mask, cuda=self.use_cuda=='cuda')
+                return sup_cont_loss
+
+        elif mode == 'inference':
+            _, ht = self.rnn(seq)
+            ht = torch.cat((ht[0].squeeze(0), ht[1].squeeze(0)), dim=1)
+            logits = self.fc(ht)
+            probs = torch.softmax(logits, dim=1)
+            return probs, ht
+
+        elif mode == 'validation':
+            if self.use_bert:
+                seq_embed = self.bert_model(**self.bert_tokenizer(seq, return_tensors='pt', padding=True, truncation=True).to(self.use_cuda))[0]
+                seq_embed = self.dropout(seq_embed)
+                seq_embed = seq_embed.clone().detach().requires_grad_(True).float()
+            else:
+                seq_embed = self.embedding(seq)
+                seq_embed = self.dropout(seq_embed)
+                seq_embed = seq_embed.clone().detach().requires_grad_(True).float()
+            _, ht = self.rnn(seq_embed)
+            ht = torch.cat((ht[0].squeeze(0), ht[1].squeeze(0)), dim=1)
+            logits = self.fc(ht)
+            probs = torch.softmax(logits, dim=1)
+            return torch.argmax(label, dim=1).tolist(), torch.argmax(probs, dim=1).tolist(), ht
+
+        elif mode == 'test':
+            if self.use_bert:
+                seq_embed = self.bert_model(**self.bert_tokenizer(seq, return_tensors='pt', padding=True, truncation=True).to(self.use_cuda))[0]
+                seq_embed = self.dropout(seq_embed)
+                seq_embed = seq_embed.clone().detach().requires_grad_(True).float()
+            else:
+                seq_embed = self.embedding(seq)
+                seq_embed = self.dropout(seq_embed)
+                seq_embed = seq_embed.clone().detach().requires_grad_(True).float()
+            _, ht = self.rnn(seq_embed)
+            ht = torch.cat((ht[0].squeeze(0), ht[1].squeeze(0)), dim=1)
+            logits = self.fc(ht)
+            probs = torch.softmax(logits, dim=1)
+            return probs, ht,logits
+        else:
+            raise ValueError("undefined mode")
+
+
+
+
+
+
+
+
+
+
+
