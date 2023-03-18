@@ -153,19 +153,77 @@ def plot_confusion_matrix(title, test_y, pred_y, labels_name=labels):
 
 # loss and acc
 # 画指标折线图
-def plt_index_of_model(epochs, loss, accuracy, val_loss, val_accuracy):
-    x = np.arange(1, epochs + 1)
-    l1 = plt.plot(x, loss, 'r--', label='loss')
-    l2 = plt.plot(x, accuracy, 'g--', label='accuracy')
-    l3 = plt.plot(x, val_loss, 'b--', label='val_loss')
-    l4 = plt.plot(x, val_accuracy, 'c--', label='val_accuracy')
-    plt.plot(x, loss, 'ro-', x, accuracy, 'g+-', x, val_loss, 'b^-', x, val_accuracy, 'c.-')
-    plt.title('CNN - index')
-    plt.xlabel('epochs')
-    plt.ylabel('value')
+def plt_index_of_model(epochs, loss, accuracy, val_loss, val_accuracy, title='Model'):
+    x = np.arange(1, epochs + 1, 1)
+    fig = plt.figure()
+    ax1 = fig.add_subplot(111)
+    # fig, ax1 = plt.subplots()
+
+    ax1.set_xlabel('Epochs')
+    ax1.set_ylabel('Acc/%')
+    ax1.tick_params('y', colors='r')
+    ax1.plot(x, accuracy, 'g+-', label='accuracy')
+    ax1.plot(x, val_accuracy, 'c.-', label='val_accuracy')
+
+    ax2 = ax1.twinx()
+    # ax2.plot(x, accuracy, 'g', label='accuracy')
+    # ax2.plot(x, val_accuracy, 'c', label='val_accuracy')
+    # ax2.plot(x, loss, 'r', label='loss')
+    # ax2.plot(x, val_loss, 'b', label='val_loss')
+    ax1.legend()
+    # ax1.grid()
+
+    ax2.set_ylabel('Loss')
+    ax2.tick_params('y', colors='b')
+    ax2.plot(x, loss, 'ro-', label='loss')
+    ax2.plot(x, val_loss, 'b^-', label='val_loss')
+
+    ax1.set_title(title + '- history')
+
     plt.legend()
+    plt.savefig('./output/figure/{}.jpg'.format(title))
     plt.show()
 
+def plot_twin(_y1, _y2, _ylabel1, _ylabel2):
+    fig, ax1 = plt.subplots()
+    color = 'tab:blue'
+    ax1.set_xlabel('time')
+    ax1.set_ylabel(_ylabel1, color=color)
+    ax1.plot(_y1, color=color)
+    ax1.tick_params(axis='y', labelcolor=color)
+
+    ax2 = ax1.twinx()  # 创建共用x轴的第二个y轴
+
+    color = 'tab:red'
+    ax2.set_ylabel(_ylabel2, color=color)
+    ax2.plot(_y2, color=color)
+    ax2.tick_params(axis='y', labelcolor=color)
+
+    fig.tight_layout()
+    plt.show()
+
+#画折线图
+def plt_line(title, x_label, y_label, x, dict=None):
+    if dict is None:
+        print("折线图输入数据为空")
+        return
+    color = [
+        ['r--', 'ro-'],
+        ['g--', 'g+-'],
+        ['b--', 'b^-'],
+        ['c--', 'c.-'],
+    ]
+    i = 0
+    for key,value in dict.items():
+        plt.plot(x, value, color[i][0], label=key)
+        plt.plot(x, value, color[i][1],)
+        i += 1
+    # plt.plot(x, loss, 'ro-', x, accuracy, 'g+-', x, val_loss, 'b^-', x, val_accuracy, 'c.-')
+    plt.title(title)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.legend()
+    plt.show()
 
 def plt_feat_importance(model, dim):
     features = read_features() # 248 维

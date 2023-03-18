@@ -8,10 +8,9 @@ if __name__ == '__main__':
     # moore.init(1)
     ml.config(numClass=num_classes, numPixels=num_pixels, ood_X=ood_x, ood_Y=ood_y, train_Labels=train_labels, ood_Labels=ood_labels)
     # baseline(train_x, train_y, test_x, test_y)
-    simple_CNN(train_x, train_y, test_x, test_y)
-    load_CNN(train_x, train_y, test_x, test_y)
-    # contrast_learning_CNN()
+    # simple_CNN(train_x, train_y, test_x, test_y)
     local_threshold(train_x, train_y, test_x, test_y)
+    # contrast_learning_CNN()
 
     # DecisionTr(train_x, train_y, test_x, test_y)
     # load_DecisionTr()

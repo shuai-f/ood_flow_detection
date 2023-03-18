@@ -1,6 +1,5 @@
 from sklearn.metrics import confusion_matrix
 
-import numpy as np
 import matplotlib.pyplot as plt
 import numpy as np
 import itertools
