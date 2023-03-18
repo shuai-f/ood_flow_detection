@@ -96,6 +96,7 @@ def parse_option():
 
 def main():
     args = parse_option()
+    # import resourcesoft, hard = resource.getrlimit(resource.RLIMIT_AS)
     print(args)
 
     # check args
@@ -137,7 +138,7 @@ def main():
         test_x = test_x.reshape(-1, num_pixel).astype(np.float32)
         print(train_x.shape, test_x.shape)
     elif args.data == 'self':
-        from main.self_dataset import train_labels, ood_labels
+        from self.self_dataset import train_labels, ood_labels
         trainLabels = train_labels
         oodLabels = ood_labels
         train_x, train_y, test_x, test_y, ood_x, ood_y = self_dataset.read_data(oodLabels)
@@ -171,7 +172,7 @@ def main():
         (train_x, train_y)).shuffle(5000).batch(args.batch_size_1)
 
     train_ds2 = tf.data.Dataset.from_tensor_slices(
-        (train_x, train_y)).shuffle(260000).batch(args.batch_size_2)
+        (train_x, train_y)).shuffle(10000).batch(args.batch_size_2)
 
     test_ds = tf.data.Dataset.from_tensor_slices(
         (test_x, test_y)).batch(args.batch_size_1)
@@ -181,7 +182,7 @@ def main():
 
     if args.model == 'MLP':
         encoder = MLP(normalize=False, activation=args.activation)
-        encoder.build((None, 16*16,))
+        encoder.build((None, num_pixel,))
     elif args.model == 'RNN':
         train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
         test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)

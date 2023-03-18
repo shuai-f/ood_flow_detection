@@ -64,7 +64,19 @@ def parse_option():
 WEIGHT_PATH = './output/weight/'
 def main():
     args = parse_option()
+
+    import resource
+    import time
+    import psutil
+    p = psutil.Process()
+    print(p.pid)
+    def limit_memory(maxsize):
+        soft, hard = resource.getrlimit(resource.RLIMIT_AS)
+        resource.setrlimit(resource.RLIMIT_AS, (maxsize, hard))
+
+    limit_memory(1024 * 1024 * 1024 * 4)
     print(args)
+
 
     optimizer = tf.keras.optimizers.Adam(learning_rate=args.lr)
     # 0. Load data
@@ -108,19 +120,19 @@ def main():
     elif args.model == 'RNN':
         train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
         test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        model = SimpleRNN(normalize=False, activation=args.activation, input_shape=(16*16, 1))
+        model = SimpleRNN(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
     elif args.model == 'LSTM':
         train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
         test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        model = LSTM(normalize=False, activation=args.activation, input_shape=(16*16, 1))
+        model = LSTM(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
     elif args.model == 'GRU':
         train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
         test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        model = GRU(normalize=False, activation=args.activation, input_shape=(16*16, 1))
+        model = GRU(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
     elif args.model == 'CNN':
         train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
         test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        model = CNN(normalize=False, activation=args.activation, input_shape=(16*16, 1))
+        model = CNN(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
     else :
         print("Unknown Model Name :{}".format(args.model))
         return
@@ -138,7 +150,7 @@ def main():
     print(train_x.shape, train_y.shape)
 
     train_ds = tf.data.Dataset.from_tensor_slices(
-        (train_x, train_y)).shuffle(50000).batch(args.batch_size)
+        (train_x, train_y)).shuffle(200000).batch(args.batch_size)
 
     test_ds = tf.data.Dataset.from_tensor_slices(
         (test_x, test_y)).batch(args.batch_size)
@@ -268,7 +280,7 @@ def main():
     ood_x = model.get_last_hidden(ood_x).numpy()
     LocalThreshold(ood_x, ood_y, train_x, train_y, test_x, test_y, model, w, b, trainLabels, oodLabels)
     ood_x = get_ood_dict(ood_x, ood_y, oodLabels)
-    # VirtualLogit(ood_x, ood_y, train_x, train_y, test_x, test_y, model, w, b, trainLabels, oodLabels)
+    VirtualLogit(ood_x, ood_y, train_x, train_y, test_x, test_y, model, w, b, trainLabels, oodLabels)
 
 
 def load_model():
@@ -297,23 +309,23 @@ def load_model():
 
     if args.model == 'MLP':
         model = MLP(normalize=False, activation=args.activation)
-        model.build(input_shape=[None, 16 * 16, ])
+        model.build(input_shape=[None, num_pixel, ])
     elif args.model == 'RNN':
         train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
         test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        model = SimpleRNN(normalize=False, activation=args.activation, input_shape=(16*16, 1))
+        model = SimpleRNN(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
     elif args.model == 'LSTM':
         train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
         test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        model = LSTM(normalize=False, activation=args.activation, input_shape=(16*16, 1))
+        model = LSTM(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
     elif args.model == 'GRU':
         train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
         test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        model = GRU(normalize=False, activation=args.activation, input_shape=(16*16, 1))
+        model = GRU(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
     elif args.model == 'CNN':
         train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
         test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        model = CNN(normalize=False, activation=args.activation, input_shape=(16*16, 1))
+        model = CNN(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
     else :
         print("Unknown Model Name :{}".format(args.model))
         return
@@ -335,5 +347,5 @@ def load_model():
 
 
 if __name__ == '__main__':
-    # main()
-    load_model()
+    main()
+    # load_model()

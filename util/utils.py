@@ -72,6 +72,16 @@ def load_model(model, name='', lis=None):
     model.load_weights('./output/model/' + name)
     return model
 
+def get_path():
+    time_now = time.strftime("%Y-%m-%d", time.localtime())
+    path = "./output/preference/" + '/' + time_now
+    if not os.path.exists(path):
+        os.makedirs(path)
+    path += '/figure'
+    if not os.path.exists(path):
+        os.makedirs(path)
+    path += '/' + time.strftime("%H-%M-%S", time.localtime()) + '_'
+    return path
 
 def save_weights(w, b, filename):
     weight_path = "./output/weight/"
@@ -184,7 +194,7 @@ def plt_index_of_model(epochs, loss, accuracy, val_loss, val_accuracy, title='Mo
     ax1.set_title(title + '- history')
 
     plt.legend()
-    plt.savefig('./output/figure/{}.jpg'.format(title))
+    plt.savefig(get_path() + title + '.jpg')
     plt.show()
 
 def plot_twin(_y1, _y2, _ylabel1, _ylabel2):
@@ -226,13 +236,7 @@ def plt_line(title, x_label, y_label, x, dict=None):
     plt.xlabel(x_label)
     plt.ylabel(y_label)
     plt.legend()
-    time_now = time.strftime("%Y-%m-%d", time.localtime())
-    path = "./output/preference/" + '/' + time_now
-    if not os.path.exists(path):
-        os.makedirs(path)
-        print('文件夹创建完成  ' + path)
-    path += '/' + time.strftime("%H-%M-%S", time.localtime()) + '_' + title
-    plt.savefig(path)
+    plt.savefig(get_path() + title + '.jpg')
     plt.show()
 
 def plt_feat_importance(model, dim):

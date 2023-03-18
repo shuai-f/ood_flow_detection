@@ -70,7 +70,7 @@ def main():
         test_x = test_x.reshape(-1, num_pixel).astype(np.float32)
         print(train_x.shape, test_x.shape)
     elif args.data == 'self':
-        from main.self_dataset import train_labels, ood_labels
+        from self_dataset import train_labels, ood_labels
         trainLabels = train_labels
         oodLabels = ood_labels
         train_x, train_y, test_x, test_y, ood_x, ood_y = self_dataset.read_data(oodLabels)

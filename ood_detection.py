@@ -274,9 +274,9 @@ def VirtualLogit(feature_oods, ood_y, feature_id_train, train_y, feature_id_val,
         DIM += 20
     # plt_line('Performance of different DIM', 'DIM', 'AUROC', DIM_set, ood_result)
     # 画折线图
-    plt_line('Performance of different DIM', 'DIM', 'AUROC', DIM_set, auroc_result)
+    plt_line('Auroc of different DIM', 'DIM', 'AUROC', DIM_set, auroc_result)
 
-    plt_line('Performance of different DIM', 'DIM', 'FPR', DIM_set, fpr_result)
+    plt_line('Fpr of different DIM', 'DIM', 'FPR', DIM_set, fpr_result)
 
     # df.to_csv("./output/splits/splits_2/preference.csv")
     print("Mahalanobis : ==================================")

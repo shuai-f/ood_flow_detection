@@ -82,8 +82,9 @@ def read_features(train_labels, ood_labels):
             for n, i in enumerate(file.readlines()[1:]):
                 i = i.replace('\n', '')
                 spl = i.split(',')
-                spl[0:6] = '0' # 五元组+timestamp
-                spl.append('0') # 9*9
+                for i in range(6):
+                    spl[i] = '0'  # 五元组+timestamp
+                del spl[0]
                 x = [float(j) for j in spl]
                 y = index
                 X.append(x)
@@ -97,8 +98,9 @@ def read_features(train_labels, ood_labels):
             for n, i in enumerate(file.readlines()[1:]):
                 i = i.replace('\n', '')
                 spl = i.split(',')
-                spl[0:6] = '0' # 五元组+timestamp
-                spl.append('0') # 9*9
+                for i in range(6):
+                    spl[i] = '0'  # 五元组+timestamp
+                del spl[0]
                 x = [float(j) for j in spl]
                 y = index
                 oodX.append(x)
@@ -110,15 +112,17 @@ num_classes, num_pixels, train_labels, ood_labels = init(1)
 total_x, total_y, ood_x, ood_y = read_features(train_labels, ood_labels)
 
 train_x, test_x, train_y, test_y = train_test_split(total_x, total_y, test_size=0.25, random_state=0)
-# train_x = tf.convert_to_tensor(train_x, dtype=tf.float32)
-# train_y = tf.convert_to_tensor(train_y, dtype=tf.int32)
-# test_x = tf.convert_to_tensor(test_x, dtype=tf.float32)
-# test_y = tf.convert_to_tensor(test_y, dtype=tf.int32)
-# ood_x = tf.convert_to_tensor(ood_x, dtype=tf.float32)
-# ood_y = tf.convert_to_tensor(ood_y, dtype=tf.int32)
+train_x = tf.convert_to_tensor(train_x, dtype=tf.float32)
+train_y = tf.convert_to_tensor(train_y, dtype=tf.int32)
+test_x = tf.convert_to_tensor(test_x, dtype=tf.float32)
+test_y = tf.convert_to_tensor(test_y, dtype=tf.int32)
+ood_x = tf.convert_to_tensor(ood_x, dtype=tf.float32)
+ood_y = tf.convert_to_tensor(ood_y, dtype=tf.int32)
 train_x = tf.keras.utils.normalize(train_x, axis=1)
 test_x = tf.keras.utils.normalize(test_x, axis=1)
 ood_x = tf.keras.utils.normalize(ood_x, axis=1)
+
+print(train_x.shape, train_y.shape, test_x.shape, test_y.shape, ood_x.shape, ood_y.shape)
 
 if __name__ == '__main__':
     write_to_file()
