@@ -1,10 +1,12 @@
 import os
 
+import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
 
 from util import ml
 from util.ml import simple_CNN
+from util.utils import list_to_str
 
 # Moore数据集使用网络监测器采集1 000个用户通过一条链路在24 h内的网络流量，
 # 原始流量集包含在两个链路方向上连接节点的所有全双工流量。由于原始流量集太大，通过随机抽样方法将其划分为10个子集。
@@ -45,6 +47,32 @@ def init(num=1):
 
     return numClasses, numPixels, trainLabels, oodLabels
 
+
+input_npy_moore_dir = './inputs/npy/moore/'
+def read_data(oodLabels=None):
+    if oodLabels is None:
+        oodLabels = ood_labels
+    splits_dir = input_npy_moore_dir + list_to_str(oodLabels) + '_'
+    train_x = np.load(splits_dir + 'train_x.npy')
+    train_y = np.load(splits_dir + 'train_y.npy')
+    test_x = np.load(splits_dir + 'test_x.npy')
+    test_y = np.load(splits_dir + 'test_y.npy')
+    ood_x = np.load(splits_dir + 'ood_x.npy')
+    ood_y = np.load(splits_dir + 'ood_y.npy')
+    return train_x, train_y, test_x, test_y, ood_x, ood_y
+
+def write_data(train_x, train_y, test_x, test_y, ood_x, ood_y, oodLabels=None):
+    if not os.path.exists(input_npy_moore_dir):
+        os.makedirs(input_npy_moore_dir)
+    if oodLabels is None:
+        oodLabels = ood_labels
+    splits_dir = input_npy_moore_dir + list_to_str(oodLabels) + '_'
+    np.save(splits_dir + 'train_x.npy', train_x)
+    np.save(splits_dir + 'train_y.npy', train_y)
+    np.save(splits_dir + 'test_x.npy', test_x)
+    np.save(splits_dir + 'test_y.npy', test_y)
+    np.save(splits_dir + 'ood_x.npy', ood_x)
+    np.save(splits_dir + 'ood_y.npy', ood_y)
 
 # 数据预处理
 # read the file,change 'Y,N,?,', translate to tensor
@@ -158,9 +186,10 @@ print(ood_x)
 print(ood_y)
 
 if __name__ == '__main__':
-    ml.config(8, 256, ood_x, ood_y, train_labels, ood_labels)
-    print("\nCNN------------------------------------------------\n")
-    simple_CNN(train_x, train_y, test_x, test_y)
+    write_data(train_x, train_y, test_x, test_y, ood_x, ood_y)
+    # ml.config(8, 256, ood_x, ood_y, train_labels, ood_labels)
+    # print("\nCNN------------------------------------------------\n")
+    # simple_CNN(train_x, train_y, test_x, test_y)
     # print("\nBaseline------------------------------------------------\n")
     # baseline(train_x, train_y, test_x, test_y)
     # print("\nBayes------------------------------------------------\n")
@@ -176,5 +205,5 @@ if __name__ == '__main__':
     # print("\n混淆矩阵------------------------------------------------\n")
     # print("\nLSTM------------------------------------------------\n")
     # lstm(train_x, train_y, test_x, test_y)
-    print("\nRandomForest------------------------------------------------\n")
+    # print("\nRandomForest------------------------------------------------\n")
     # RandomForest(train_x, train_y, test_x, test_y)

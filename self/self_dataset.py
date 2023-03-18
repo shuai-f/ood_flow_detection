@@ -59,6 +59,8 @@ def read_data(oodLabels=None):
     return train_x, train_y, test_x, test_y, ood_x, ood_y
 
 def write_data(train_x, train_y, test_x, test_y, ood_x, ood_y, oodLabels=None):
+    if not os.path.exists(input_npy_self_dir):
+        os.makedirs(input_npy_self_dir)
     if oodLabels is None:
         oodLabels = ood_labels
     splits_dir = input_npy_self_dir + list_to_str(oodLabels) + '_'
@@ -119,6 +121,6 @@ test_x = tf.keras.utils.normalize(test_x, axis=1)
 ood_x = tf.keras.utils.normalize(ood_x, axis=1)
 
 if __name__ == '__main__':
-    # write_to_file()
+    write_to_file()
     write_data(train_x, train_y, test_x, test_y, ood_x, ood_y, ood_labels)
 
