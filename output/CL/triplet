@@ -1,0 +1,125 @@
+/Users/shuaif/miniforge3/envs/py38/bin/python /Users/shuaif/PycharmProjects/ood_flow_detection/contrast_learning/main.py --epoch 20 --loss triplet-semihard --n_data_train 260000 --write_summary --temperature 0.1 --base_temperature 0.07
+entry01.weka.allclass.arff
+entry02.weka.allclass.arff
+entry03.weka.allclass.arff
+entry04.weka.allclass.arff
+entry05.weka.allclass.arff
+entry06.weka.allclass.arff
+entry07.weka.allclass.arff
+entry08.weka.allclass.arff
+entry09.weka.allclass.arff
+entry10.weka.allclass.arff
+/Users/shuaif/miniforge3/envs/py38/lib/python3.8/site-packages/numpy/linalg/linalg.py:2556: RuntimeWarning: overflow encountered in multiply
+  s = (x.conj() * x).real
+tf.Tensor(
+[[0.0000000e+00 0.0000000e+00 7.3170647e-10 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [0.0000000e+00 0.0000000e+00 1.1376424e-11 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [0.0000000e+00 0.0000000e+00 1.9073474e-09 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ ...
+ [0.0000000e+00 0.0000000e+00 5.9771745e-12 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [0.0000000e+00 0.0000000e+00 1.1658807e-12 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [0.0000000e+00 0.0000000e+00 2.0887862e-10 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]], shape=(268611, 256), dtype=float32)
+tf.Tensor([0 0 0 ... 0 0 0], shape=(268611,), dtype=int32)
+tf.Tensor(
+[[0.0000000e+00 0.0000000e+00 1.1887288e-12 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [0.0000000e+00 0.0000000e+00 1.0251340e-11 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [0.0000000e+00 0.0000000e+00 9.5248399e-11 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ ...
+ [0.0000000e+00 0.0000000e+00 1.8353378e-09 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [0.0000000e+00 0.0000000e+00 1.0799720e-12 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [0.0000000e+00 0.0000000e+00 1.3046733e-10 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]], shape=(2183, 256), dtype=float32)
+tf.Tensor([1 1 1 ... 2 1 1], shape=(2183,), dtype=int32)
+Namespace(activation='leaky_relu', base_temperature=0.07, batch_size_1=512, batch_size_2=32, data='mnist', draw_figures=False, epoch=20, loss='triplet-semihard', lr_1=0.5, lr_2=0.001, margin=1.0, metric='euclidean', n_data_train=260000, optimizer='adam', projection_dim=128, temperature=0.1, write_summary=True)
+Loading mnist data...
+WARNING:absl:`lr` is deprecated, please use `learning_rate` instead, or use the legacy optimizer, e.g.,tf.keras.optimizers.legacy.Adam.
+WARNING:absl:`lr` is deprecated, please use `learning_rate` instead, or use the legacy optimizer, e.g.,tf.keras.optimizers.legacy.Adam.
+(268611, 256) (89538, 256)
+Training dataset shapes after slicing:
+(260000, 256) (260000,)
+Stage 1 training ...
+Decode : Tensor("unit_norm_layer/truediv:0", shape=(512, 256), dtype=float32)
+Projector : Tensor("unit_norm_layer_1/truediv:0", shape=(512, 256), dtype=float32)
+Decode : Tensor("unit_norm_layer/truediv:0", shape=(512, 256), dtype=float32)
+Projector : Tensor("unit_norm_layer_1/truediv:0", shape=(512, 256), dtype=float32)
+2023-03-08 20:52:20.943934: W tensorflow/tsl/platform/profile_utils/cpu_utils.cc:128] Failed to get CPU frequency: 0 Hz
+Decode : Tensor("unit_norm_layer/truediv:0", shape=(416, 256), dtype=float32)
+Projector : Tensor("unit_norm_layer_1/truediv:0", shape=(416, 256), dtype=float32)
+Decode : Tensor("unit_norm_layer/truediv:0", shape=(512, 256), dtype=float32)
+Projector : Tensor("unit_norm_layer_1/truediv:0", shape=(512, 256), dtype=float32)
+Decode : Tensor("unit_norm_layer/truediv:0", shape=(450, 256), dtype=float32)
+Projector : Tensor("unit_norm_layer_1/truediv:0", shape=(450, 256), dtype=float32)
+Epoch 1, Loss: 0.5592889785766602, Test Loss: 0.5310828685760498
+Epoch 2, Loss: 0.41321730613708496, Test Loss: 0.3483803868293762
+Epoch 3, Loss: 0.3570235073566437, Test Loss: 0.33635371923446655
+Epoch 4, Loss: 0.41296371817588806, Test Loss: 0.341533899307251
+Epoch 5, Loss: 0.3460048735141754, Test Loss: 0.3446201682090759
+Epoch 6, Loss: 0.32104960083961487, Test Loss: 0.6541001200675964
+Epoch 7, Loss: 0.3665239214897156, Test Loss: 0.29567357897758484
+Epoch 8, Loss: 0.29992085695266724, Test Loss: 0.31045854091644287
+Epoch 9, Loss: 0.29948562383651733, Test Loss: 0.3854199945926666
+Epoch 10, Loss: 0.2760152518749237, Test Loss: 0.25616517663002014
+Epoch 11, Loss: 0.2837332487106323, Test Loss: 0.25727832317352295
+Epoch 12, Loss: 0.28598156571388245, Test Loss: 0.25697091221809387
+Epoch 13, Loss: 0.276680052280426, Test Loss: 0.2548951208591461
+Epoch 14, Loss: 0.27744007110595703, Test Loss: 0.2489244043827057
+Epoch 15, Loss: 0.2720041871070862, Test Loss: 0.27122122049331665
+Epoch 16, Loss: 0.2656686007976532, Test Loss: 0.22394555807113647
+Epoch 17, Loss: 0.24844633042812347, Test Loss: 0.25489169359207153
+Epoch 18, Loss: 0.26077041029930115, Test Loss: 0.23210416734218597
+Epoch 19, Loss: 0.24740499258041382, Test Loss: 0.2949233055114746
+Epoch 20, Loss: 0.25463205575942993, Test Loss: 0.41819238662719727
+Stage 2 training ...
+WARNING:tensorflow:AutoGraph could not transform <function main.<locals>.train_step at 0x17c01c3a0> and will run it as-is.
+Please report this to the TensorFlow team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output.
+Cause: closure mismatch, requested ('cce_loss_obj', 'encoder', 'optimizer2', 'softmax', 'train_acc', 'train_loss'), but source function had ('encoder',)
+To silence this warning, decorate the function with @tf.autograph.experimental.do_not_convert
+WARNING:tensorflow:AutoGraph could not transform <function main.<locals>.train_step at 0x17c01c3a0> and will run it as-is.
+Please report this to the TensorFlow team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output.
+Cause: closure mismatch, requested ('cce_loss_obj', 'encoder', 'optimizer2', 'softmax', 'train_acc', 'train_loss'), but source function had ('encoder',)
+To silence this warning, decorate the function with @tf.autograph.experimental.do_not_convert
+Decode : Tensor("unit_norm_layer/truediv:0", shape=(32, 256), dtype=float32)
+/Users/shuaif/miniforge3/envs/py38/lib/python3.8/site-packages/keras/backend.py:5585: UserWarning: "`sparse_categorical_crossentropy` received `from_logits=True`, but the `output` argument was produced by a Softmax activation and thus does not represent logits. Was this intended?
+  output, from_logits = _get_logits(
+Decode : Tensor("unit_norm_layer/truediv:0", shape=(32, 256), dtype=float32)
+WARNING:tensorflow:AutoGraph could not transform <function main.<locals>.test_step at 0x17c01c310> and will run it as-is.
+Please report this to the TensorFlow team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output.
+Cause: closure mismatch, requested ('cce_loss_obj', 'encoder', 'softmax', 'test_acc', 'test_loss'), but source function had ('encoder', 'test_loss')
+To silence this warning, decorate the function with @tf.autograph.experimental.do_not_convert
+WARNING:tensorflow:AutoGraph could not transform <function main.<locals>.test_step at 0x17c01c310> and will run it as-is.
+Please report this to the TensorFlow team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output.
+Cause: closure mismatch, requested ('cce_loss_obj', 'encoder', 'softmax', 'test_acc', 'test_loss'), but source function had ('encoder', 'test_loss')
+To silence this warning, decorate the function with @tf.autograph.experimental.do_not_convert
+Decode : Tensor("unit_norm_layer/truediv:0", shape=(512, 256), dtype=float32)
+Decode : Tensor("unit_norm_layer/truediv:0", shape=(450, 256), dtype=float32)
+Epoch 1, Loss: 0.20314739644527435, Acc: 94.79461669921875, Test Loss: 0.12022359669208527, Test Acc: 96.7120132446289
+Epoch 2, Loss: 0.10666050761938095, Acc: 96.96231079101562, Test Loss: 0.1026034951210022, Test Acc: 97.20677185058594
+Epoch 3, Loss: 0.09491654485464096, Acc: 97.33038330078125, Test Loss: 0.09455069154500961, Test Acc: 97.41004180908203
+Epoch 4, Loss: 0.08853186666965485, Acc: 97.528076171875, Test Loss: 0.0895952433347702, Test Acc: 97.44912719726562
+Epoch 5, Loss: 0.08432775735855103, Acc: 97.72115325927734, Test Loss: 0.08569822460412979, Test Acc: 97.78976440429688
+Epoch 6, Loss: 0.08119851350784302, Acc: 97.88615417480469, Test Loss: 0.08308811485767365, Test Acc: 97.80204772949219
+Epoch 7, Loss: 0.07881347835063934, Acc: 97.97154235839844, Test Loss: 0.08075043559074402, Test Acc: 97.97069549560547
+Epoch 8, Loss: 0.07679331302642822, Acc: 98.05846405029297, Test Loss: 0.07876547425985336, Test Acc: 97.986328125
+Epoch 9, Loss: 0.07510428130626678, Acc: 98.10846710205078, Test Loss: 0.0771743580698967, Test Acc: 97.99079895019531
+Epoch 10, Loss: 0.07368068397045135, Acc: 98.14730834960938, Test Loss: 0.07582111656665802, Test Acc: 98.19182586669922
+Epoch 11, Loss: 0.0723695456981659, Acc: 98.19192504882812, Test Loss: 0.07435119152069092, Test Acc: 98.24543762207031
+Epoch 12, Loss: 0.07123472541570663, Acc: 98.21154022216797, Test Loss: 0.07327545434236526, Test Acc: 98.2420883178711
+Epoch 13, Loss: 0.07019404321908951, Acc: 98.24846649169922, Test Loss: 0.07217175513505936, Test Acc: 98.24767303466797
+Epoch 14, Loss: 0.06924361735582352, Acc: 98.2750015258789, Test Loss: 0.07128392159938812, Test Acc: 98.2845230102539
+Epoch 15, Loss: 0.06833260506391525, Acc: 98.2953872680664, Test Loss: 0.07027174532413483, Test Acc: 98.22533416748047
+Epoch 16, Loss: 0.06755932420492172, Acc: 98.32038116455078, Test Loss: 0.06952478736639023, Test Acc: 98.27336120605469
+Epoch 17, Loss: 0.06677767634391785, Acc: 98.34730529785156, Test Loss: 0.06870897859334946, Test Acc: 98.26107788085938
+Epoch 18, Loss: 0.06606756895780563, Acc: 98.3550033569336, Test Loss: 0.06808415800333023, Test Acc: 98.28117370605469
+Epoch 19, Loss: 0.06540071219205856, Acc: 98.38384246826172, Test Loss: 0.06740403175354004, Test Acc: 98.32250213623047
+Epoch 20, Loss: 0.06477837264537811, Acc: 98.3826904296875, Test Loss: 0.06670595705509186, Test Acc: 98.3068618774414

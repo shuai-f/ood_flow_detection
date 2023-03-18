@@ -1,0 +1,111 @@
+/Users/shuaif/miniforge3/envs/py38/bin/python /Users/shuaif/PycharmProjects/ood_flow_detection/contrast_learning/main.py --epoch 20 --loss npairs --n_data_train 260000 --write_summary --temperature 0.1 --base_temperature 0.07
+entry01.weka.allclass.arff
+entry02.weka.allclass.arff
+entry03.weka.allclass.arff
+entry04.weka.allclass.arff
+entry05.weka.allclass.arff
+entry06.weka.allclass.arff
+entry07.weka.allclass.arff
+entry08.weka.allclass.arff
+entry09.weka.allclass.arff
+entry10.weka.allclass.arff
+/Users/shuaif/miniforge3/envs/py38/lib/python3.8/site-packages/numpy/linalg/linalg.py:2556: RuntimeWarning: overflow encountered in multiply
+  s = (x.conj() * x).real
+tf.Tensor(
+[[0.0000000e+00 0.0000000e+00 7.3170647e-10 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [0.0000000e+00 0.0000000e+00 1.1376424e-11 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [0.0000000e+00 0.0000000e+00 1.9073474e-09 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ ...
+ [0.0000000e+00 0.0000000e+00 5.9771745e-12 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [0.0000000e+00 0.0000000e+00 1.1658807e-12 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [0.0000000e+00 0.0000000e+00 2.0887862e-10 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]], shape=(268611, 256), dtype=float32)
+tf.Tensor([0 0 0 ... 0 0 0], shape=(268611,), dtype=int32)
+tf.Tensor(
+[[0.0000000e+00 0.0000000e+00 1.1887288e-12 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [0.0000000e+00 0.0000000e+00 1.0251340e-11 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [0.0000000e+00 0.0000000e+00 9.5248399e-11 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ ...
+ [0.0000000e+00 0.0000000e+00 1.8353378e-09 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [0.0000000e+00 0.0000000e+00 1.0799720e-12 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]
+ [0.0000000e+00 0.0000000e+00 1.3046733e-10 ... 0.0000000e+00
+  0.0000000e+00 0.0000000e+00]], shape=(2183, 256), dtype=float32)
+tf.Tensor([1 1 1 ... 2 1 1], shape=(2183,), dtype=int32)
+Namespace(activation='leaky_relu', base_temperature=0.07, batch_size_1=512, batch_size_2=32, data='mnist', draw_figures=False, epoch=20, loss='npairs', lr_1=0.5, lr_2=0.001, margin=1.0, metric='euclidean', n_data_train=260000, optimizer='adam', projection_dim=128, temperature=0.1, write_summary=True)
+Loading mnist data...
+WARNING:absl:`lr` is deprecated, please use `learning_rate` instead, or use the legacy optimizer, e.g.,tf.keras.optimizers.legacy.Adam.
+WARNING:absl:`lr` is deprecated, please use `learning_rate` instead, or use the legacy optimizer, e.g.,tf.keras.optimizers.legacy.Adam.
+(268611, 256) (89538, 256)
+Training dataset shapes after slicing:
+(260000, 256) (260000,)
+Stage 1 training ...
+Decode : Tensor("unit_norm_layer/truediv:0", shape=(512, 256), dtype=float32)
+Projector : Tensor("unit_norm_layer_1/truediv:0", shape=(512, 256), dtype=float32)
+Decode : Tensor("unit_norm_layer/truediv:0", shape=(512, 256), dtype=float32)
+Projector : Tensor("unit_norm_layer_1/truediv:0", shape=(512, 256), dtype=float32)
+2023-03-08 20:45:21.721844: W tensorflow/tsl/platform/profile_utils/cpu_utils.cc:128] Failed to get CPU frequency: 0 Hz
+Decode : Tensor("unit_norm_layer/truediv:0", shape=(416, 256), dtype=float32)
+Projector : Tensor("unit_norm_layer_1/truediv:0", shape=(416, 256), dtype=float32)
+Decode : Tensor("unit_norm_layer/truediv:0", shape=(512, 256), dtype=float32)
+Projector : Tensor("unit_norm_layer_1/truediv:0", shape=(512, 256), dtype=float32)
+Decode : Tensor("unit_norm_layer/truediv:0", shape=(450, 256), dtype=float32)
+Projector : Tensor("unit_norm_layer_1/truediv:0", shape=(450, 256), dtype=float32)
+Epoch 1, Loss: 6.021162509918213, Test Loss: 6.00104284286499
+Epoch 2, Loss: 5.995122909545898, Test Loss: 5.990418434143066
+Epoch 3, Loss: 5.9915595054626465, Test Loss: 5.985556125640869
+Epoch 4, Loss: 5.9883856773376465, Test Loss: 5.9872565269470215
+Epoch 5, Loss: 5.9874186515808105, Test Loss: 5.983895778656006
+Epoch 6, Loss: 5.9841485023498535, Test Loss: 5.980281829833984
+Epoch 7, Loss: 5.985292911529541, Test Loss: 5.984440803527832
+Epoch 8, Loss: 5.983574867248535, Test Loss: 5.98287296295166
+Epoch 9, Loss: 5.982332229614258, Test Loss: 5.988515853881836
+Epoch 10, Loss: 5.982293605804443, Test Loss: 5.982677936553955
+Epoch 11, Loss: 5.9820237159729, Test Loss: 5.991982460021973
+Epoch 12, Loss: 5.982846260070801, Test Loss: 5.98423433303833
+Epoch 13, Loss: 5.981714248657227, Test Loss: 5.980876922607422
+Epoch 14, Loss: 5.9813995361328125, Test Loss: 5.97959041595459
+Epoch 15, Loss: 5.980127811431885, Test Loss: 5.981187343597412
+Epoch 16, Loss: 5.980143070220947, Test Loss: 5.979008197784424
+Epoch 17, Loss: 5.980770111083984, Test Loss: 5.977404594421387
+Epoch 18, Loss: 5.98020076751709, Test Loss: 5.979138374328613
+Epoch 19, Loss: 5.979714393615723, Test Loss: 5.977867603302002
+Epoch 20, Loss: 5.9797749519348145, Test Loss: 5.976693153381348
+Stage 2 training ...
+Decode : Tensor("unit_norm_layer/truediv:0", shape=(32, 256), dtype=float32)
+/Users/shuaif/miniforge3/envs/py38/lib/python3.8/site-packages/keras/backend.py:5585: UserWarning: "`sparse_categorical_crossentropy` received `from_logits=True`, but the `output` argument was produced by a Softmax activation and thus does not represent logits. Was this intended?
+  output, from_logits = _get_logits(
+Decode : Tensor("unit_norm_layer/truediv:0", shape=(32, 256), dtype=float32)
+Decode : Tensor("unit_norm_layer/truediv:0", shape=(512, 256), dtype=float32)
+Decode : Tensor("unit_norm_layer/truediv:0", shape=(450, 256), dtype=float32)
+Epoch 1, Loss: 0.11410358548164368, Acc: 97.6407699584961, Test Loss: 0.06243830919265747, Test Acc: 98.48332214355469
+Epoch 2, Loss: 0.0561312772333622, Acc: 98.54307556152344, Test Loss: 0.05391952395439148, Test Acc: 98.64862060546875
+Epoch 3, Loss: 0.05059056729078293, Acc: 98.77960968017578, Test Loss: 0.05011582002043724, Test Acc: 98.85635375976562
+Epoch 4, Loss: 0.04761471599340439, Acc: 98.86500549316406, Test Loss: 0.047847893089056015, Test Acc: 98.83625030517578
+Epoch 5, Loss: 0.04561667516827583, Acc: 98.89807891845703, Test Loss: 0.046129852533340454, Test Acc: 98.91107940673828
+Epoch 6, Loss: 0.04410019516944885, Acc: 98.9111557006836, Test Loss: 0.04489510506391525, Test Acc: 98.87310028076172
+Epoch 7, Loss: 0.04292173311114311, Acc: 98.92230987548828, Test Loss: 0.043801918625831604, Test Acc: 98.94681549072266
+Epoch 8, Loss: 0.04190320149064064, Acc: 98.94499969482422, Test Loss: 0.04297074303030968, Test Acc: 98.97920227050781
+Epoch 9, Loss: 0.04104296490550041, Acc: 98.96807861328125, Test Loss: 0.04219087213277817, Test Acc: 98.95909881591797
+Epoch 10, Loss: 0.040306370705366135, Acc: 98.9826889038086, Test Loss: 0.04152492433786392, Test Acc: 98.92559814453125
+Epoch 11, Loss: 0.03963305428624153, Acc: 98.98846435546875, Test Loss: 0.040877800434827805, Test Acc: 99.00601196289062
+Epoch 12, Loss: 0.03903885558247566, Acc: 99.00423431396484, Test Loss: 0.04034866392612457, Test Acc: 98.9758529663086
+Epoch 13, Loss: 0.03849141672253609, Acc: 99.02192687988281, Test Loss: 0.039839498698711395, Test Acc: 98.99148559570312
+Epoch 14, Loss: 0.037988994270563126, Acc: 99.03346252441406, Test Loss: 0.03943067789077759, Test Acc: 98.99707794189453
+Epoch 15, Loss: 0.03751127049326897, Acc: 99.05230712890625, Test Loss: 0.038956597447395325, Test Acc: 99.02946472167969
+Epoch 16, Loss: 0.03709859400987625, Acc: 99.06230926513672, Test Loss: 0.03856154903769493, Test Acc: 99.01829528808594
+Epoch 17, Loss: 0.03669276088476181, Acc: 99.0638427734375, Test Loss: 0.0382416658103466, Test Acc: 99.01718139648438
+Epoch 18, Loss: 0.036322351545095444, Acc: 99.06884765625, Test Loss: 0.03791900351643562, Test Acc: 99.0115966796875
+Epoch 19, Loss: 0.03595544397830963, Acc: 99.0888442993164, Test Loss: 0.037540700286626816, Test Acc: 99.02946472167969
+Epoch 20, Loss: 0.03562678024172783, Acc: 99.09615325927734, Test Loss: 0.03731531277298927, Test Acc: 99.03727722167969
+
+Process finished with exit code 0

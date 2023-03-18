@@ -1,3 +1,6 @@
+import os
+import time
+
 import numpy as np
 from matplotlib import pyplot as plt
 from sklearn.metrics import confusion_matrix
@@ -223,6 +226,13 @@ def plt_line(title, x_label, y_label, x, dict=None):
     plt.xlabel(x_label)
     plt.ylabel(y_label)
     plt.legend()
+    time_now = time.strftime("%Y-%m-%d", time.localtime())
+    path = "./output/preference/" + '/' + time_now
+    if not os.path.exists(path):
+        os.makedirs(path)
+        print('文件夹创建完成  ' + path)
+    path += '/' + time.strftime("%H-%M-%S", time.localtime()) + '_' + title
+    plt.savefig(path)
     plt.show()
 
 def plt_feat_importance(model, dim):

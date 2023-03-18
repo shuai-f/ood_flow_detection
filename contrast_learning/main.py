@@ -1,5 +1,6 @@
 '''
-Script to run various two-stage supervised contrastive loss functions on
+Script to run various two-stage supervised contrastive loss functions on 
+MNIST or Fashion MNIST data.
 '''
 import argparse
 import datetime
@@ -13,8 +14,7 @@ import seaborn as sns
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 from contrast_learning.model import *
-import contrast_learning.losses
-from main import self_dataset
+import losses
 from ood_detection import VirtualLogit, get_ood_dict, LocalThreshold
 from util.utils import list_to_str, plt_index_of_model, plt_line
 
@@ -39,10 +39,10 @@ def parse_option():
     parser.add_argument('--batch_size_1', type=int, default=512,
                         help='batch size for stage 1 pretraining'
                         )
-    parser.add_argument('--batch_size_2', type=int, default=128,
+    parser.add_argument('--batch_size_2', type=int, default=32,
                         help='batch size for stage 2 training'
                         )
-    parser.add_argument('--lr_1', type=float, default=0.0001,
+    parser.add_argument('--lr_1', type=float, default=0.5,
                         help='learning rate for stage 1 pretraining'
                         )
     parser.add_argument('--lr_2', type=float, default=0.001,
@@ -60,19 +60,17 @@ def parse_option():
                         help='margin for tfa.losses.contrastive_loss. will only be used when --loss=max_margin')
     parser.add_argument('--metric', type=str, default='euclidean',
                         help='distance metrics for tfa.losses.contrastive_loss, choose from ("euclidean", "cosine"). will only be used when --loss=max_margin')
-    parser.add_argument('--temperature', type=float, default=0.07,
+    parser.add_argument('--temperature', type=float, default=0.5,
                         help='temperature for sup_nt_xent loss. will only be used when --loss=sup_nt_xent')
     parser.add_argument('--base_temperature', type=float, default=0.07,
                         help='base_temperature for sup_nt_xent loss. will only be used when --loss=sup_nt_xent')
     # dataset params
-    parser.add_argument('--data', type=str, default='moore',
-                        help='Dataset to choose from ("mnist", "moore", "self")'
+    parser.add_argument('--data', type=str, default='mnist',
+                        help='Dataset to choose from ("mnist", "fashion_mnist")'
                         )
     parser.add_argument('--n_data_train', type=int, default=60000,
                         help='number of data points used for training both stage 1 and 2'
                         )
-    parser.add_argument('--model', type=str, default='MLP',
-                        help='DNN model to choose from ("MLP","RNN","LSTM","GRU")')
 
     # model architecture
     parser.add_argument('--projection_dim', type=int, default=128,
@@ -105,7 +103,7 @@ def main():
     if args.optimizer == 'adam':
         optimizer1 = tf.keras.optimizers.Adam(learning_rate=args.lr_1)
     elif args.optimizer == 'lars':
-        from contrast_learning.lars_optimizer import LARSOptimizer
+        from lars_optimizer import LARSOptimizer
         # not compatible with tf2
         optimizer1 = LARSOptimizer(args.lr_1,
                                    exclude_from_weight_decay=['batch_normalization', 'bias'])
@@ -116,44 +114,33 @@ def main():
                                          )
     optimizer2 = tf.keras.optimizers.Adam(learning_rate=args.lr_2)
 
-    model_name = '{}_model-bs_{}-lr_{}_pre_to_cl'.format(
-        args.loss, args.batch_size_1, args.lr_2)
+    model_name = '{}_model-bs_{}-lr_{}'.format(
+        args.loss, args.batch_size_1, args.lr_1)
 
     # 0. Load data
-    if args.data == 'moore':
-        trainLabels = ['WWW', 'MAIL', 'FTP-CONTROL', 'FTP-PASV', 'ATTACK', 'P2P', 'DATABASE', 'FTP-DATA', ]
-        oodLabels = ['MULTIMEDIA', 'P2P', 'INTERACTIVE', 'GAMES', ]
-        input_npy_moore_dir = './inputs/npy/moore/'
-        splits_dir = input_npy_moore_dir + list_to_str(oodLabels) + '_'
-        train_x = np.load(splits_dir + 'train_x.npy')
-        train_y = np.load(splits_dir + 'train_y.npy')
-        test_x = np.load(splits_dir + 'test_x.npy')
-        test_y = np.load(splits_dir + 'test_y.npy')
-        ood_x = np.load(splits_dir + 'ood_x.npy')
-        ood_y = np.load(splits_dir + 'ood_y.npy')
-        # x_train, x_test = x_train / 25535.0, x_test / 25535.0
-        num_pixel = 16 * 16
-        train_x = train_x.reshape(-1, num_pixel).astype(np.float32)
-        test_x = test_x.reshape(-1, num_pixel).astype(np.float32)
-        print(train_x.shape, test_x.shape)
-    elif args.data == 'self':
-        from main.self_dataset import train_labels, ood_labels
-        trainLabels = train_labels
-        oodLabels = ood_labels
-        train_x, train_y, test_x, test_y, ood_x, ood_y = self_dataset.read_data(oodLabels)
-        num_pixel = 9 * 9
-        train_x = train_x.reshape(-1, num_pixel).astype(np.float32)
-        test_x = test_x.reshape(-1, num_pixel).astype(np.float32)
-        print(train_x.shape, test_x.shape)
-    else :
-        print("Unknown Dataset Name :{}".format(args.data))
-        return
-
+    if args.data == 'mnist':
+        mnist = tf.keras.datasets.mnist
+    elif args.data == 'fashion_mnist':
+        mnist = tf.keras.datasets.fashion_mnist
     print('Loading {} data...'.format(args.data))
     # (x_train, y_train), (x_test, y_test) = mnist.load_data()
     # x_train, x_test = x_train / 255.0, x_test / 255.0
     # x_train = x_train.reshape(-1, 28 * 28).astype(np.float32)
     # x_test = x_test.reshape(-1, 28 * 28).astype(np.float32)
+
+    trainLabels = ['WWW', 'MAIL', 'FTP-CONTROL', 'FTP-PASV', 'ATTACK', 'P2P', 'DATABASE', 'FTP-DATA', ]
+    oodLabels = ['MULTIMEDIA', 'P2P', 'INTERACTIVE', 'GAMES', ]
+    input_npy_moore_dir = './inputs/npy/moore/'
+    splits_dir = input_npy_moore_dir + list_to_str(oodLabels) + '_'
+    train_x = np.load(splits_dir + 'train_x.npy')
+    train_y = np.load(splits_dir + 'train_y.npy')
+    test_x = np.load(splits_dir + 'test_x.npy')
+    test_y = np.load(splits_dir + 'test_y.npy')
+    ood_x = np.load(splits_dir + 'ood_x.npy')
+    ood_y = np.load(splits_dir + 'ood_y.npy')
+    # x_train, x_test = x_train / 25535.0, x_test / 25535.0
+    train_x = train_x.reshape(-1, 16 * 16).astype(np.float32)
+    test_x = test_x.reshape(-1, 16 * 16).astype(np.float32)
 
     print(train_x.shape, test_x.shape)
 
@@ -176,50 +163,22 @@ def main():
     test_ds = tf.data.Dataset.from_tensor_slices(
         (test_x, test_y)).batch(args.batch_size_1)
 
-    pre_model_name = '{}_{}-bs_{}-lr_{}'.format(
-        args.data, args.model, args.batch_size_2, args.lr_2)
-
-    if args.model == 'MLP':
-        encoder = MLP(normalize=False, activation=args.activation)
-        encoder.build((None, 16*16,))
-    elif args.model == 'RNN':
-        train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        encoder = SimpleRNN(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
-    elif args.model == 'LSTM':
-        train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        encoder = LSTM(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
-    elif args.model == 'GRU':
-        train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        encoder = GRU(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
-    elif args.model == 'CNN':
-        train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        encoder = CNN(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
-    else:
-        print("Unknown Model Name :{}".format(args.model))
-        return
-
     # 1. Stage 1: train encoder with multiclass N-pair loss
     encoder = Encoder(normalize=True, activation=args.activation)
-    # print("load model {}...".format(pre_model_name))
-    # encoder.load_weights(WEIGHT_PATH + pre_model_name + "-basemodel.h5")
     projector = Projector(args.projection_dim,
                           normalize=True, activation=args.activation)
 
     if args.loss == 'max_margin':
-        def loss_func(z, y): return contrast_learning.losses.max_margin_contrastive_loss(
+        def loss_func(z, y): return losses.max_margin_contrastive_loss(
             z, y, margin=args.margin, metric=args.metric)
     elif args.loss == 'npairs':
-        loss_func = contrast_learning.losses.multiclass_npairs_loss
+        loss_func = losses.multiclass_npairs_loss
     elif args.loss == 'sup_nt_xent':
-        def loss_func(z, y): return contrast_learning.losses.supervised_nt_xent_loss(
+        def loss_func(z, y): return losses.supervised_nt_xent_loss(
             z, y, temperature=args.temperature, base_temperature=args.base_temperature)
     elif args.loss.startswith('triplet'):
         triplet_kind = args.loss.split('-')[1]
-        def loss_func(z, y): return contrast_learning.losses.triplet_loss(
+        def loss_func(z, y): return losses.triplet_loss(
             z, y, kind=triplet_kind, margin=args.margin)
 
     train_loss = tf.keras.metrics.Mean(name='train_loss')
@@ -234,7 +193,6 @@ def main():
         y: data labels, shape: (batch_size, )
         '''
         with tf.GradientTape() as tape:
-            # r = encoder.get_last_hidden(x, training=True)
             r = encoder(x, training=True)
             z = projector(r, training=True)
             loss = loss_func(z, y)
@@ -247,7 +205,6 @@ def main():
 
     @tf.function
     def test_step_stage1(x, y):
-        # r = encoder.get_last_hidden(x, training=False)
         r = encoder(x, training=False)
         z = projector(r, training=False)
         t_loss = loss_func(z, y)
@@ -372,10 +329,8 @@ def main():
         y: data labels, shape: (batch_size, )
         '''
         with tf.GradientTape() as tape:
-            # r = encoder.get_last_hidden(x, training=False)
             r = encoder(x, training=False)
             y_preds = softmax(r, training=True)
-            # y_preds = encoder(x, training=True)
             loss = cce_loss_obj(y, y_preds)
 
         # freeze the encoder, only train the softmax layer
@@ -388,10 +343,8 @@ def main():
 
     @tf.function
     def test_step(x, y):
-        # r = encoder.get_last_hidden(x, training=False)
         r = encoder(x, training=False)
         y_preds = softmax(r, training=False)
-        # y_preds = encoder(x, training=False)
         t_loss = cce_loss_obj(y, y_preds)
         test_loss(t_loss)
         test_acc(y, y_preds)
@@ -450,7 +403,6 @@ def main():
     train_x = encoder(train_x).numpy()
     test_x = encoder(test_x).numpy()
     ood_x = encoder(ood_x).numpy()
-    LocalThreshold(ood_x, ood_y, train_x, train_y, test_x, test_y, softmax, w, b, trainLabels, oodLabels)
     ood_x = get_ood_dict(ood_x, ood_y, oodLabels)
     VirtualLogit(ood_x, ood_y, train_x, train_y, test_x, test_y, softmax, w, b, trainLabels, oodLabels)
 
@@ -500,5 +452,5 @@ def load_model():
 
 
 if __name__ == '__main__':
-    main()
-    # load_model()
+    # main()
+    load_model()
