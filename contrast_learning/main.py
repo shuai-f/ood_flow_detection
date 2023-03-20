@@ -5,18 +5,16 @@ MNIST or Fashion MNIST data.
 import argparse
 import datetime
 import numpy as np
-import tensorflow as tf
 import tensorflow_addons as tfa
 import pandas as pd
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 from contrast_learning.model import *
 import losses
-from ood_detection import VirtualLogit, get_ood_dict, LocalThreshold
-from util.utils import list_to_str, plt_index_of_model, plt_line
+from util.ood_detection import VirtualLogit, get_ood_dict, LocalThreshold
+from util.utils import list_to_str
 
 SEED = 42
 np.random.seed(SEED)
@@ -257,7 +255,6 @@ def main():
         lda.fit(x_tr_proj, train_y)
         x_te_proj_lda = lda.transform(x_te_proj)
 
-        from mpl_toolkits.mplot3d import Axes3D
         fig = plt.figure(figsize=(10, 10))
         ax = fig.add_subplot(111, projection='3d')
         plt.title("PCA-{}".format(args.loss))

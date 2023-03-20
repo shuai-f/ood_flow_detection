@@ -4,17 +4,13 @@ Script to run baseline with cross-entropy loss on
 import argparse
 import datetime
 import numpy as np
-import tensorflow as tf
-import tensorflow_addons as tfa
 import pandas as pd
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.metrics import confusion_matrix
 
 from contrast_learning.model import *
-from self import self_dataset
-from ood_detection import VirtualLogit, LocalThreshold, get_ood_dict
+from util.ood_detection import VirtualLogit, LocalThreshold, get_ood_dict
 from util.utils import list_to_str, plt_index_of_model
 
 SEED = 42
@@ -65,16 +61,6 @@ WEIGHT_PATH = './output/weight/'
 def main():
     args = parse_option()
 
-    import resource
-    import time
-    import psutil
-    p = psutil.Process()
-    print(p.pid)
-    def limit_memory(maxsize):
-        soft, hard = resource.getrlimit(resource.RLIMIT_AS)
-        resource.setrlimit(resource.RLIMIT_AS, (maxsize, hard))
-
-    limit_memory(1024 * 1024 * 1024 * 4)
     print(args)
 
 
@@ -100,10 +86,10 @@ def main():
         test_x = test_x.reshape(-1, num_pixel).astype(np.float32)
         print(train_x.shape, test_x.shape)
     elif args.data == 'self':
-        from self.self_dataset import train_labels, ood_labels
+        from self.self_dataset import train_labels, ood_labels, read_data
         trainLabels = train_labels
         oodLabels = ood_labels
-        train_x, train_y, test_x, test_y, ood_x, ood_y = self_dataset.read_data(oodLabels)
+        train_x, train_y, test_x, test_y, ood_x, ood_y = read_data(oodLabels)
         num_pixel = 9 * 9
         train_x = train_x.reshape(-1, num_pixel).astype(np.float32)
         test_x = test_x.reshape(-1, num_pixel).astype(np.float32)
@@ -114,28 +100,28 @@ def main():
     model_name = '{}_{}-bs_{}-lr_{}'.format(
         args.data, args.model, args.batch_size, args.lr)
 
-    # 1. the baseline MLP model
+    # 1. the baseline model
     if args.model == 'MLP':
         model = MLP(normalize=False, activation=args.activation)
-    elif args.model == 'RNN':
-        train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        model = SimpleRNN(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
-    elif args.model == 'LSTM':
-        train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        model = LSTM(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
-    elif args.model == 'GRU':
-        train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        model = GRU(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
-    elif args.model == 'CNN':
-        train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        model = CNN(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
+        model.build(input_shape=[None, num_pixel, ])
     else :
-        print("Unknown Model Name :{}".format(args.model))
-        return
+        train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
+        test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
+        ood_x = ood_x.reshape(-1, num_pixel, 1).astype(np.float32)
+        if args.model == 'RNN':
+            model = SimpleRNN(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
+        elif args.model == 'LSTM':
+            model = LSTM(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
+        elif args.model == 'GRU':
+            model = GRU(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
+        elif args.model == 'CNN':
+            model = CNN(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
+        elif args.model == 'SimpleCNN':
+            model = SimpleCNN(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
+        else :
+            print("Unknown Model Name :{}".format(args.model))
+            return
+        model.build(input_shape=[None, num_pixel, 1])
     cce_loss_obj = tf.keras.losses.SparseCategoricalCrossentropy(
         from_logits=True)
 
@@ -227,15 +213,15 @@ def main():
         history['val_loss'].append(test_loss.result())
         history['val_accuracy'].append(test_acc.result() * 100)
     plt_index_of_model(args.epoch, history['loss'], history['accuracy'], history['val_loss'],history['val_accuracy'], title=args.model)
-    # get the projections from the last hidden layer before output
-    x_tr_proj = model.get_last_hidden(train_x)
-    x_te_proj = model.get_last_hidden(test_x)
-    # convert tensor to np.array
-    x_tr_proj = x_tr_proj.numpy()
-    x_te_proj = x_te_proj.numpy()
-    print(x_tr_proj.shape, x_te_proj.shape)
     # 2. Check learned embedding
     if args.draw_figures:
+        # get the projections from the last hidden layer before output
+        x_tr_proj = model.get_last_hidden(train_x)
+        x_te_proj = model.get_last_hidden(test_x)
+        # convert tensor to np.array
+        x_tr_proj = x_tr_proj.numpy()
+        x_te_proj = x_te_proj.numpy()
+        print(x_tr_proj.shape, x_te_proj.shape)
         # do PCA for the projected data
         pca = PCA(n_components=2)
         pca.fit(x_tr_proj)
@@ -275,7 +261,19 @@ def main():
     print(w, w.shape)
     print(b, b.shape)
     model.save_weights(WEIGHT_PATH + model_name + '-basemodel.h5')
-    train_x = model.get_last_hidden(train_x).numpy()
+    train_x_slices = tf.data.Dataset.from_tensor_slices((train_x, train_y)).batch(args.batch_size)
+    train_x = None
+    train_y = None
+    for x, y in train_x_slices:
+        x = model.get_last_hidden(x, training=False)
+        x = x.numpy()
+        # print("x {}, {}".format(x, x.shape))
+        if train_x is None:
+            train_x = x
+            train_y = y
+        else:
+            train_x = np.concatenate((train_x, x), axis=0)
+            train_y = np.concatenate((train_y, y), axis=0)
     test_x = model.get_last_hidden(test_x).numpy()
     ood_x = model.get_last_hidden(ood_x).numpy()
     LocalThreshold(ood_x, ood_y, train_x, train_y, test_x, test_y, model, w, b, trainLabels, oodLabels)
@@ -288,56 +286,120 @@ def load_model():
     print(args)
 
     print('Loading {} data...'.format(args.data))
-    trainLabels = ['WWW', 'MAIL', 'FTP-CONTROL', 'FTP-PASV', 'ATTACK', 'P2P', 'DATABASE', 'FTP-DATA', ]
-    oodLabels = ['MULTIMEDIA', 'P2P', 'INTERACTIVE', 'GAMES', ]
-    input_npy_moore_dir = './inputs/npy/moore/'
-    splits_dir = input_npy_moore_dir + list_to_str(oodLabels) + '_'
-    train_x = np.load(splits_dir + 'train_x.npy')
-    train_y = np.load(splits_dir + 'train_y.npy')
-    test_x = np.load(splits_dir + 'test_x.npy')
-    test_y = np.load(splits_dir + 'test_y.npy')
-    ood_x = np.load(splits_dir + 'ood_x.npy')
-    ood_y = np.load(splits_dir + 'ood_y.npy')
-    # x_train, x_test = x_train / 25535.0, x_test / 25535.0
-    num_pixel = 16 * 16
-    train_x = train_x.reshape(-1, num_pixel).astype(np.float32)
-    test_x = test_x.reshape(-1, num_pixel).astype(np.float32)
+    if args.data == 'moore':
+        trainLabels = ['WWW', 'MAIL', 'FTP-CONTROL', 'FTP-PASV', 'ATTACK', 'P2P', 'DATABASE', 'FTP-DATA', ]
+        oodLabels = ['MULTIMEDIA', 'P2P', 'INTERACTIVE', 'GAMES', ]
+        input_npy_moore_dir = './inputs/npy/moore/'
+        splits_dir = input_npy_moore_dir + list_to_str(oodLabels) + '_'
+        train_x = np.load(splits_dir + 'train_x.npy')
+        train_y = np.load(splits_dir + 'train_y.npy')
+        test_x = np.load(splits_dir + 'test_x.npy')
+        test_y = np.load(splits_dir + 'test_y.npy')
+        ood_x = np.load(splits_dir + 'ood_x.npy')
+        ood_y = np.load(splits_dir + 'ood_y.npy')
+        # x_train, x_test = x_train / 25535.0, x_test / 25535.0
+        num_pixel = 16 * 16
+        train_x = train_x.reshape(-1, num_pixel).astype(np.float32)
+        test_x = test_x.reshape(-1, num_pixel).astype(np.float32)
+        ood_x = ood_x.reshape(-1, num_pixel).astype(np.float32)
+        print(train_x.shape, test_x.shape)
+    elif args.data == 'self':
+        from self.self_dataset import train_labels, ood_labels, read_data
+        trainLabels = train_labels
+        oodLabels = ood_labels
+        train_x, train_y, test_x, test_y, ood_x, ood_y = read_data(oodLabels)
+        num_pixel = 9 * 9
+        train_x = train_x.reshape(-1, num_pixel).astype(np.float32)
+        test_x = test_x.reshape(-1, num_pixel).astype(np.float32)
+    else:
+        print("Unknown Dataset Name :{}".format(args.data))
+        return
 
-    print(train_x.shape, test_x.shape)
     model_name = '{}_{}-bs_{}-lr_{}'.format(
         args.data, args.model, args.batch_size, args.lr)
 
     if args.model == 'MLP':
         model = MLP(normalize=False, activation=args.activation)
         model.build(input_shape=[None, num_pixel, ])
-    elif args.model == 'RNN':
-        train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        model = SimpleRNN(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
-    elif args.model == 'LSTM':
-        train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        model = LSTM(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
-    elif args.model == 'GRU':
-        train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        model = GRU(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
-    elif args.model == 'CNN':
-        train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        model = CNN(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
     else :
-        print("Unknown Model Name :{}".format(args.model))
-        return
+        train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
+        test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
+        ood_x = ood_x.reshape(-1, num_pixel, 1).astype(np.float32)
+        if args.model == 'RNN':
+            model = SimpleRNN(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
+        elif args.model == 'LSTM':
+            model = LSTM(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
+        elif args.model == 'GRU':
+            model = GRU(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
+        elif args.model == 'CNN':
+            model = CNN(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
+        elif args.model == 'SimpleCNN':
+            model = SimpleCNN(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
+        else :
+            print("Unknown Model Name :{}".format(args.model))
+            return
+        model.build(input_shape=[None, num_pixel, 1])
 
     model.load_weights(WEIGHT_PATH + model_name + '-basemodel.h5')
+
+    if args.draw_figures:
+        # get the projections from the last hidden layer before output
+        x_tr_proj = model.get_last_hidden(train_x)
+        x_te_proj = model.get_last_hidden(test_x)
+        # convert tensor to np.array
+        x_tr_proj = x_tr_proj.numpy()
+        x_te_proj = x_te_proj.numpy()
+        print(x_tr_proj.shape, x_te_proj.shape)
+        # do PCA for the projected data
+        pca = PCA(n_components=2)
+        pca.fit(x_tr_proj)
+        x_te_proj_pca = pca.transform(x_te_proj)
+
+        x_te_proj_pca_df = pd.DataFrame(x_te_proj_pca, columns=['PC1', 'PC2'])
+        x_te_proj_pca_df['label'] = test_y
+        # PCA scatter plot
+        fig, ax = plt.subplots()
+        ax = sns.scatterplot('PC1', 'PC2',
+                             data=x_te_proj_pca_df,
+                             palette='tab10',
+                             hue='label',
+                             linewidth=0,
+                             alpha=0.6,
+                             ax=ax
+                             )
+
+        box = ax.get_position()
+        ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        title = 'Data: %s; Embedding: %s' % args.data, args.model
+        ax.set_title(title)
+        fig.savefig('figs/PCA_plot_%s_%s_last_layer.png' % args.data, args.model)
+        # density plot for PCA
+        g = sns.jointplot('PC1', 'PC2', data=x_te_proj_pca_df,
+                          kind="hex"
+                          )
+        plt.subplots_adjust(top=0.95)
+        g.fig.suptitle(title)
+        g.savefig('figs/Joint_PCA_plot_%s_%s_last_layer.png' % args.data, args.model)
 
     print(model.summary())
     w, b = model.output_layer.get_weights()
     w = w.T
     print(w, w.shape)
     print(b, b.shape)
-    train_x = model.get_last_hidden(train_x).numpy()
+    # train_x = model.get_last_hidden(train_x).numpy()
+    train_x_slices = tf.data.Dataset.from_tensor_slices((train_x, train_y)).batch(args.batch_size)
+    train_x = None
+    train_y = None
+    for x, y in train_x_slices:
+        x = model.get_last_hidden(x, training=False)
+        # print("x {}, {}".format(x, x.shape))
+        if train_x is None:
+            train_x = x
+            train_y = y
+        else:
+            train_x = np.concatenate((train_x, x), axis=0)
+            train_y = np.concatenate((train_y, y), axis=0)
     test_x = model.get_last_hidden(test_x).numpy()
     ood_x = model.get_last_hidden(ood_x).numpy()
     LocalThreshold(ood_x, ood_y, train_x, train_y, test_x, test_y, model.output_layer, w, b, trainLabels, oodLabels)

@@ -3,16 +3,13 @@ import tensorflow as tf
 import numpy as np
 import time
 
-import torch
-import keras.backend as K
-from keras.backend import softmax
 from keras.callbacks import Callback
 from matplotlib import pyplot as plt
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 from tensorflow import keras
 from keras.models import Sequential
-from keras import layers, Model
+from keras import layers
 from sklearn import metrics
 from sklearn.metrics import f1_score, precision_score, recall_score
 from sklearn.svm import SVC
@@ -21,7 +18,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 
-from ood_detection import Msp, VirtualLogit, LocalThreshold
+from util.ood_detection import VirtualLogit, LocalThreshold
 from util.utils import plot_confusion_matrix, plt_index_of_model, save_model, load_model, plt_feat_importance, \
     list_to_str, read_features
 

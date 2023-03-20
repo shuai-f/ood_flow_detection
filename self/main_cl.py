@@ -4,18 +4,16 @@ Script to run various two-stage supervised contrastive loss functions on
 import argparse
 import datetime
 import numpy as np
-import tensorflow as tf
 import tensorflow_addons as tfa
 import pandas as pd
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 from contrast_learning.model import *
 import contrast_learning.losses
 from main import self_dataset
-from ood_detection import VirtualLogit, get_ood_dict, LocalThreshold
+from util.ood_detection import VirtualLogit, get_ood_dict, LocalThreshold
 from util.utils import list_to_str, plt_index_of_model, plt_line
 
 SEED = 42
@@ -42,7 +40,7 @@ def parse_option():
     parser.add_argument('--batch_size_2', type=int, default=128,
                         help='batch size for stage 2 training'
                         )
-    parser.add_argument('--lr_1', type=float, default=0.0001,
+    parser.add_argument('--lr_1', type=float, default=0.5,
                         help='learning rate for stage 1 pretraining'
                         )
     parser.add_argument('--lr_2', type=float, default=0.001,
@@ -72,7 +70,7 @@ def parse_option():
                         help='number of data points used for training both stage 1 and 2'
                         )
     parser.add_argument('--model', type=str, default='MLP',
-                        help='DNN model to choose from ("MLP","RNN","LSTM","GRU")')
+                        help='DNN model to choose from ("MLP","RNN","LSTM","GRU","CNN")')
 
     # model architecture
     parser.add_argument('--projection_dim', type=int, default=128,
@@ -117,10 +115,12 @@ def main():
                                          )
     optimizer2 = tf.keras.optimizers.Adam(learning_rate=args.lr_2)
 
-    model_name = '{}_model-bs_{}-lr_{}_pre_to_cl'.format(
-        args.loss, args.batch_size_1, args.lr_2)
+    model_name = '{}_{}-bs_{}-lr_{}_pre_to_cl'.format(
+        args.loss, args.model, args.batch_size_1, args.lr_2)
 
     # 0. Load data
+
+    print('Loading {} data...'.format(args.data))
     if args.data == 'moore':
         trainLabels = ['WWW', 'MAIL', 'FTP-CONTROL', 'FTP-PASV', 'ATTACK', 'P2P', 'DATABASE', 'FTP-DATA', ]
         oodLabels = ['MULTIMEDIA', 'P2P', 'INTERACTIVE', 'GAMES', ]
@@ -150,15 +150,31 @@ def main():
         print("Unknown Dataset Name :{}".format(args.data))
         return
 
-    print('Loading {} data...'.format(args.data))
-    # (x_train, y_train), (x_test, y_test) = mnist.load_data()
-    # x_train, x_test = x_train / 255.0, x_test / 255.0
-    # x_train = x_train.reshape(-1, 28 * 28).astype(np.float32)
-    # x_test = x_test.reshape(-1, 28 * 28).astype(np.float32)
+    pre_model_name = '{}_{}-bs_{}-lr_{}'.format(
+        args.data, args.model, args.batch_size_2, args.lr_2)
 
-    print(train_x.shape, test_x.shape)
-
-    # simulate low data regime for training
+    if args.model == 'MLP':
+        encoder = MLP(normalize=False, activation=args.activation)
+        # encoder.build(input_shape=[None, num_pixel, ])
+    else :
+        train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
+        test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
+        ood_x = ood_x.reshape(-1, num_pixel, 1).astype(np.float32)
+        if args.model == 'RNN':
+            encoder = SimpleRNN(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
+        elif args.model == 'LSTM':
+            encoder = LSTM(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
+        elif args.model == 'GRU':
+            encoder = GRU(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
+        elif args.model == 'CNN':
+            encoder = EncoderCNN(normalize=True, activation=args.activation, input_shape=(num_pixel, 1))
+        elif args.model == 'SimpleCNN':
+            encoder = SimpleCNN(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
+        else :
+            print("Unknown Model Name :{}".format(args.model))
+            return
+        # encoder.build(input_shape=[None, num_pixel, 1])
+        # simulate low data regime for training
     n_train = train_x.shape[0]
     shuffle_idx = np.arange(n_train)
     np.random.shuffle(shuffle_idx)
@@ -177,34 +193,8 @@ def main():
     test_ds = tf.data.Dataset.from_tensor_slices(
         (test_x, test_y)).batch(args.batch_size_1)
 
-    pre_model_name = '{}_{}-bs_{}-lr_{}'.format(
-        args.data, args.model, args.batch_size_2, args.lr_2)
-
-    if args.model == 'MLP':
-        encoder = MLP(normalize=False, activation=args.activation)
-        encoder.build((None, num_pixel,))
-    elif args.model == 'RNN':
-        train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        encoder = SimpleRNN(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
-    elif args.model == 'LSTM':
-        train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        encoder = LSTM(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
-    elif args.model == 'GRU':
-        train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        encoder = GRU(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
-    elif args.model == 'CNN':
-        train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
-        encoder = CNN(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
-    else:
-        print("Unknown Model Name :{}".format(args.model))
-        return
-
     # 1. Stage 1: train encoder with multiclass N-pair loss
-    encoder = Encoder(normalize=True, activation=args.activation)
+    # encoder = Encoder(normalize=True, activation=args.activation)
     # print("load model {}...".format(pre_model_name))
     # encoder.load_weights(WEIGHT_PATH + pre_model_name + "-basemodel.h5")
     projector = Projector(args.projection_dim,
@@ -272,86 +262,7 @@ def main():
                               train_loss.result(),
                               test_loss.result()))
         loss_his['con_loss'].append(train_loss.result())
-    # plt_line('Contrast Loss','Epoch','Value',[i for i in range(args.epoch)],loss_his)
-
-
-    if args.draw_figures:
-        # projecting data with the trained encoder, projector
-        x_tr_proj = projector(encoder(train_x))
-        x_te_proj = projector(encoder(test_x))
-        # convert tensor to np.array
-        x_tr_proj = x_tr_proj.numpy()
-        x_te_proj = x_te_proj.numpy()
-        print(x_tr_proj.shape, x_te_proj.shape)
-
-        # check learned embedding using PCA
-        lda = PCA(n_components=2)
-        lda.fit(x_tr_proj)
-        x_te_proj_pca = lda.transform(x_te_proj)
-
-        plt.figure(figsize=(4, 4))
-        plt.plot(122)
-        plt.title("PCA-{}".format(args.loss))
-        plt.scatter(x_te_proj_pca[:, 0], x_te_proj_pca[:, 1], c=test_y)
-        # plt.savefig("PCA-{}.png".format(args.loss), dpi=600)
-        plt.show()
-
-        # check learned embedding using LDA : 测试集对比
-        lda = PCA(n_components=3)#LinearDiscriminantAnalysis(n_components=3)
-        lda.fit(x_tr_proj, train_y)
-        x_te_proj_lda = lda.transform(x_te_proj)
-
-        from mpl_toolkits.mplot3d import Axes3D
-        fig = plt.figure(figsize=(10, 10))
-        ax = fig.add_subplot(111, projection='3d')
-        plt.title("PCA-{}".format(args.loss))
-        ax.scatter(x_te_proj_lda[:, 0], x_te_proj_lda[:, 1], x_te_proj_lda[:, 2], c=test_y)
-        plt.savefig("LDA-{}.png".format(args.loss), dpi=600)
-        plt.show()
-
-        lda = PCA(n_components=3)
-        lda.fit(train_x, train_y)
-        x_te_lda = lda.transform(test_x)
-
-        fig = plt.figure(figsize=(10, 10))
-        ax = fig.add_subplot(111, projection='3d')
-        plt.title("PCA-{}".format('origin'))
-        ax.scatter(x_te_lda[:, 0], x_te_lda[:, 1], x_te_lda[:, 2], c=test_y)
-        plt.savefig("LDA-{}.png".format('origin'), dpi=600)
-        plt.show()
-
-        x_te_proj_pca_df = pd.DataFrame(x_te_proj_pca, columns=['PC1', 'PC2'])
-        x_te_proj_pca_df['label'] = test_y
-        # PCA scatter plot
-        fig, ax = plt.subplots()
-        ax = sns.scatterplot(x='PC1',
-                             y='PC2',
-                             data=x_te_proj_pca_df,
-                             palette='tab10',
-                             hue='label',
-                             linewidth=0,
-                             alpha=0.6,
-                             ax=ax
-                             )
-
-        box = ax.get_position()
-        ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
-        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-        title = 'Data: {}\nEmbedding: {}\nbatch size: {}; LR: {}'.format(
-            args.data, LOSS_NAMES[args.loss], args.batch_size_1, args.lr_1)
-        ax.set_title(title)
-        fig.savefig(
-            'figs/PCA_plot_{}_{}_embed.png'.format(args.data, model_name))
-
-        # density plot for PCA
-        g = sns.jointplot(x='PC1', y='PC2', data=x_te_proj_pca_df,
-                          kind="hex"
-                          )
-        plt.subplots_adjust(top=0.95)
-        g.fig.suptitle(title)
-
-        g.savefig(
-            'figs/Joint_PCA_plot_{}_{}_embed.png'.format(args.data, model_name))
+    plt_line('{} Contrast Loss'.format(args.model),'Epoch','Value',[i for i in range(args.epoch)],loss_his)
 
     # Stage 2: freeze the learned representations and then learn a classifier
     # on a linear layer using a softmax loss
@@ -441,65 +352,227 @@ def main():
         history['accuracy'].append(train_acc.result())
         history['val_loss'].append(test_loss.result())
         history['val_accuracy'].append(test_acc.result())
-    # plt_index_of_model(args.epoch, history['loss'], history['accuracy'], history['val_loss'],history['val_accuracy'])
+    plt_index_of_model(args.epoch, history['loss'], history['accuracy'], history['val_loss'],history['val_accuracy'], title="{} CL".format(args.model))
 
     print(encoder.summary())
+    encoder.save_weights(WEIGHT_PATH + model_name + '-encoder.h5')
+    projector.save_weights(WEIGHT_PATH + model_name + '-projector.h5')
+    softmax.save_weights(WEIGHT_PATH + model_name + '-softmax.h5')
     w, b = softmax.dense.get_weights()
     w = w.T
     print(w, w.shape)
     print(b, b.shape)
-    train_x = encoder(train_x).numpy()
+    # train_x = encoder(train_x).numpy()
+    train_x_slices = tf.data.Dataset.from_tensor_slices((train_x, train_y)).batch(args.batch_size_2)
+    train_x = None
+    train_y = None
+    for x, y in train_x_slices:
+        x = encoder(x, training=False)
+        # print("x {}, {}".format(x, x.shape))
+        if train_x is None:
+            train_x = x
+            train_y = y
+        else:
+            train_x = np.concatenate((train_x, x), axis=0)
+            train_y = np.concatenate((train_y, y), axis=0)
+
     test_x = encoder(test_x).numpy()
     ood_x = encoder(ood_x).numpy()
     LocalThreshold(ood_x, ood_y, train_x, train_y, test_x, test_y, softmax, w, b, trainLabels, oodLabels)
     ood_x = get_ood_dict(ood_x, ood_y, oodLabels)
     VirtualLogit(ood_x, ood_y, train_x, train_y, test_x, test_y, softmax, w, b, trainLabels, oodLabels)
 
-    encoder.save_weights(WEIGHT_PATH + model_name + '-encoder.h5')
-    projector.save_weights(WEIGHT_PATH + model_name + '-projector.h5')
-    softmax.save_weights(WEIGHT_PATH + model_name + '-softmax.h5')
+
+    if args.draw_figures:
+        draw_figures(args, train_x, train_y, test_x, test_y, encoder, projector, num_pixel, model_name)
+
 
 def load_model():
     args = parse_option()
     print(args)
-    model_name = '{}_model-bs_{}-lr_{}'.format(
-        args.loss, args.batch_size_1, args.lr_1)
+    model_name = '{}_{}-bs_{}-lr_{}_pre_to_cl'.format(
+        args.loss, args.model, args.batch_size_1, args.lr_2)
 
-    trainLabels = ['WWW', 'MAIL', 'FTP-CONTROL', 'FTP-PASV', 'ATTACK', 'P2P', 'DATABASE', 'FTP-DATA', ]
-    oodLabels = ['MULTIMEDIA', 'P2P', 'INTERACTIVE', 'GAMES', ]
-    input_npy_moore_dir = './inputs/npy/moore/'
-    splits_dir = input_npy_moore_dir + list_to_str(oodLabels) + '_'
-    train_x = np.load(splits_dir + 'train_x.npy')
-    train_y = np.load(splits_dir + 'train_y.npy')
-    test_x = np.load(splits_dir + 'test_x.npy')
-    test_y = np.load(splits_dir + 'test_y.npy')
-    ood_x = np.load(splits_dir + 'ood_x.npy')
-    ood_y = np.load(splits_dir + 'ood_y.npy')
+    if args.data == 'moore':
+        trainLabels = ['WWW', 'MAIL', 'FTP-CONTROL', 'FTP-PASV', 'ATTACK', 'P2P', 'DATABASE', 'FTP-DATA', ]
+        oodLabels = ['MULTIMEDIA', 'P2P', 'INTERACTIVE', 'GAMES', ]
+        input_npy_moore_dir = './inputs/npy/moore/'
+        splits_dir = input_npy_moore_dir + list_to_str(oodLabels) + '_'
+        train_x = np.load(splits_dir + 'train_x.npy')
+        train_y = np.load(splits_dir + 'train_y.npy')
+        test_x = np.load(splits_dir + 'test_x.npy')
+        test_y = np.load(splits_dir + 'test_y.npy')
+        ood_x = np.load(splits_dir + 'ood_x.npy')
+        ood_y = np.load(splits_dir + 'ood_y.npy')
+        # x_train, x_test = x_train / 25535.0, x_test / 25535.0
+        num_pixel = 16 * 16
+        train_x = train_x.reshape(-1, num_pixel).astype(np.float32)
+        test_x = test_x.reshape(-1, num_pixel).astype(np.float32)
+        print(train_x.shape, test_x.shape)
+    elif args.data == 'self':
+        from self.self_dataset import train_labels, ood_labels
+        trainLabels = train_labels
+        oodLabels = ood_labels
+        train_x, train_y, test_x, test_y, ood_x, ood_y = self_dataset.read_data(oodLabels)
+        num_pixel = 9 * 9
+        train_x = train_x.reshape(-1, num_pixel).astype(np.float32)
+        test_x = test_x.reshape(-1, num_pixel).astype(np.float32)
+        print(train_x.shape, test_x.shape)
+    else :
+        print("Unknown Dataset Name :{}".format(args.data))
+        return
 
-    encoder = Encoder(normalize=True, activation=args.activation)
-    encoder.build(input_shape=(None, 16*16, ))
+    if args.model == 'MLP':
+        encoder = MLP(normalize=False, activation=args.activation)
+        encoder.build(input_shape=[None, num_pixel, ])
+    else :
+        train_x = train_x.reshape(-1, num_pixel, 1).astype(np.float32)
+        test_x = test_x.reshape(-1, num_pixel, 1).astype(np.float32)
+        ood_x = ood_x.reshape(-1, num_pixel, 1).astype(np.float32)
+        if args.model == 'RNN':
+            encoder = SimpleRNN(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
+        elif args.model == 'CNN':
+            encoder = EncoderCNN(normalize=True, activation=args.activation, input_shape=(num_pixel, 1))
+        elif args.model == 'SimpleCNN':
+            encoder = SimpleCNN(normalize=False, activation=args.activation, input_shape=(num_pixel, 1))
+        else :
+            print("Unknown Model Name :{}".format(args.model))
+            return
+        encoder.build(input_shape=(None, num_pixel, 1))
+    # encoder = Encoder(normalize=True, activation=args.activation)
     projector = Projector(args.projection_dim,
                           normalize=True, activation=args.activation)
-    projector.build(input_shape=(None, 16*16, ))
+    projector.build(input_shape=(None, args.projection_dim, ))
     softmax = SoftmaxPred(len(trainLabels))
-    softmax.build(input_shape=(None, 16*16, ))
+    softmax.build(input_shape=(None, args.projection_dim, ))
     print(encoder.summary())
 
     encoder.load_weights(WEIGHT_PATH + model_name + '-encoder.h5')
     projector.load_weights(WEIGHT_PATH + model_name + '-projector.h5')
     softmax.load_weights(WEIGHT_PATH + model_name + '-softmax.h5')
+
+
+    if args.draw_figures:
+        draw_figures(args, train_x, train_y, test_x, test_y, encoder, projector, num_pixel, model_name)
+    # performance
     w, b = softmax.dense.get_weights()
     w = w.T
     print(w, w.shape)
     print(b, b.shape)
-    train_x = encoder(train_x).numpy()
-    test_x = encoder(test_x).numpy()
+    # train_x = encoder(train_x).numpy()
+    save = False
+    if save:
+        train_x_slices = tf.data.Dataset.from_tensor_slices((train_x, train_y)).batch(args.batch_size_2)
+        train_x = None
+        train_y = None
+        for x, y in train_x_slices:
+            x = encoder(x, training=False)
+            # print("x {}, {}".format(x, x.shape))
+            if train_x is None:
+                train_x = x
+                train_y = y
+            else:
+                train_x = np.concatenate((train_x, x), axis=0)
+                train_y = np.concatenate((train_y, y), axis=0)
+        test_x = encoder(test_x).numpy()
+        np.save('./output/mid/train_x_cl.npy', train_x)
+        np.save('./output/mid/train_y_cl.npy', train_y)
+        np.save('./output/mid/test_x_cl.npy', test_x)
+    else :
+        train_x = np.load('./output/mid/train_x_cl.npy')
+        train_y = np.load('./output/mid/train_y_cl.npy')
+        test_x = np.load('./output/mid/test_x_cl.npy')
     ood_x = encoder(ood_x).numpy()
-    LocalThreshold(ood_x, ood_y, train_x, train_y, test_x, test_y, softmax, w, b, trainLabels, oodLabels)
+    from util.ood_func import energy_score, msp_score, mahalanobis_score, maxlogit_socre, odin_score , residual_score , nusa_score
+    LocalThreshold(ood_x, ood_y, train_x, train_y, test_x, test_y, softmax
+                   , w, b, trainLabels, oodLabels, energy_score)
     # ood_x = get_ood_dict(ood_x, ood_y, oodLabels)
     # VirtualLogit(ood_x, ood_y, train_x, train_y, test_x, test_y, softmax, w, b, trainLabels, oodLabels)
 
+def draw_figures(args, train_x, train_y, test_x, test_y, encoder, projector, num_pixel, model_name):
+    # projecting data with the trained encoder, projector
+    x_tr_proj = None
+    # 数据集过大需要切片
+    train_x_slices = tf.data.Dataset.from_tensor_slices((train_x, train_y)).batch(args.batch_size_2)
+    for x, y in train_x_slices:
+        if x_tr_proj is None:
+            x_tr_proj = projector(encoder(x))
+        else:
+            x_tr_proj = np.concatenate((x_tr_proj, projector(encoder(x))), axis=0)
+    x_te_proj = projector(encoder(test_x))
+    # convert tensor to np.array
+    # x_tr_proj = x_tr_proj.numpy()
+    x_te_proj = x_te_proj.numpy()
+    print(x_tr_proj.shape, x_te_proj.shape)
+
+    # check learned embedding using PCA
+    pca = PCA(n_components=2)
+    pca.fit(x_tr_proj)
+    x_te_proj_pca = pca.transform(x_te_proj)
+
+    plt.figure(figsize=(4, 4))
+    plt.plot(122)
+    plt.title("PCA-{}".format(args.loss))
+    plt.scatter(x_te_proj_pca[:, 0], x_te_proj_pca[:, 1], c=test_y)
+    # plt.savefig("PCA-{}.png".format(args.loss), dpi=600)
+    plt.show()
+
+    # check learned embedding using LDA : 测试集对比
+    pca = PCA(n_components=3)  # LinearDiscriminantAnalysis(n_components=3)
+    pca.fit(x_tr_proj, train_y)
+    x_te_proj_lda = pca.transform(x_te_proj)
+
+    fig = plt.figure(figsize=(10, 10))
+    ax = fig.add_subplot(111, projection='3d')
+    plt.title("PCA-{}".format(args.loss))
+    ax.scatter(x_te_proj_lda[:, 0], x_te_proj_lda[:, 1], x_te_proj_lda[:, 2], c=test_y)
+    plt.savefig("figs/PCA-{}.png".format(args.loss), dpi=600)
+    plt.show()
+
+    pca = PCA(n_components=3)
+    pca.fit(train_x.reshape(-1, num_pixel).astype(np.float32), train_y)
+    x_te_lda = pca.transform(test_x.reshape(-1, num_pixel).astype(np.float32))
+
+    fig = plt.figure(figsize=(10, 10))
+    ax = fig.add_subplot(111, projection='3d')
+    plt.title("PCA-{}".format('origin'))
+    ax.scatter(x_te_lda[:, 0], x_te_lda[:, 1], x_te_lda[:, 2], c=test_y)
+    plt.savefig("figs/PCA-{}.png".format('origin'), dpi=600)
+    plt.show()
+
+    x_te_proj_pca_df = pd.DataFrame(x_te_proj_pca, columns=['PC1', 'PC2'])
+    x_te_proj_pca_df['label'] = test_y
+    # PCA scatter plot
+    fig, ax = plt.subplots()
+    ax = sns.scatterplot(x='PC1',
+                         y='PC2',
+                         data=x_te_proj_pca_df,
+                         palette='tab10',
+                         hue='label',
+                         linewidth=0,
+                         alpha=0.6,
+                         ax=ax
+                         )
+
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    title = 'Data: {}\nEmbedding: {}\nbatch size: {}; LR: {}'.format(
+        args.data, LOSS_NAMES[args.loss], args.batch_size_1, args.lr_1)
+    ax.set_title(title)
+    fig.savefig(
+        'figs/PCA_plot_{}_{}_embed.png'.format(args.data, model_name))
+
+    # density plot for PCA
+    g = sns.jointplot(x='PC1', y='PC2', data=x_te_proj_pca_df,
+                      kind="hex"
+                      )
+    plt.subplots_adjust(top=0.95)
+    g.fig.suptitle(title)
+
+    g.savefig(
+        'figs/Joint_PCA_plot_{}_{}_embed.png'.format(args.data, model_name))
 
 if __name__ == '__main__':
-    main()
-    # load_model()
+    # main()
+    load_model()

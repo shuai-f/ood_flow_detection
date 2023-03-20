@@ -52,6 +52,38 @@ class Encoder(tf.keras.Model):
         print("Decode : {}".format(x))
         return x
 
+class EncoderCNN(tf.keras.Model):
+    """
+    CNN with the same architecture to Encoder + Softmax/Regression output.
+    activation = 'relu', 'tanh'
+    """
+
+    def __init__(self, num_classes=8, normalize=True, regress=False, input_shape=(256,1), activation='relu'):
+        super(EncoderCNN, self).__init__(name='')
+        self.conv1 = tf.keras.layers.Conv1D(100, 2, padding='valid', activation='relu', input_shape=input_shape)
+        self.maxpool1 = tf.keras.layers.MaxPool1D(pool_size=2)
+        self.conv2 = tf.keras.layers.Conv1D(100, 2, padding='valid', activation='relu')
+        self.maxpool2 = tf.keras.layers.MaxPool1D(pool_size=2)
+        self.dropout1 = tf.keras.layers.Dropout(0.25)
+        self.flatten = tf.keras.layers.Flatten()
+        self.dropout2 = tf.keras.layers.Dropout(0.5)
+        self.hidden1 = tf.keras.layers.Dense(128, activation=activation)
+        self.normalize = normalize
+        if self.normalize:
+            self.norm = UnitNormLayer()
+
+    def call(self, input_tensor, training=False):
+        x = self.conv1(input_tensor, training=training)
+        x = self.maxpool1(x, training=training)
+        x = self.conv2(x, training=training)
+        x = self.maxpool2(x, training=training)
+        x = self.dropout1(x, training=training)
+        x = self.flatten(x, training=training)
+        x = self.dropout2(x, training=training)
+        x = self.hidden1(x, training=training)
+        if self.normalize:
+            x = self.norm(x)
+        return x
 
 class Projector(tf.keras.Model):
     '''
@@ -77,7 +109,7 @@ class Projector(tf.keras.Model):
         x = self.dense2(x, training=training)
         if self.normalize:
             x = self.norm(x)
-        print("Projector : {}".format(x))
+        # print("Projector : {}".format(x))
         return x
 
 
@@ -269,6 +301,74 @@ class CNN(tf.keras.Model):
         self.flatten = tf.keras.layers.Flatten()
         self.dropout2 = tf.keras.layers.Dropout(0.5)
         self.hidden1 = tf.keras.layers.Dense(128, activation=activation)
+        self.normalize = normalize
+        if self.normalize:
+            self.norm = UnitNormLayer()
+        if not regress:
+            self.output_layer = tf.keras.layers.Dense(
+                num_classes, activation='softmax')
+        else:
+            self.output_layer = tf.keras.layers.Dense(1)
+
+    def call(self, input_tensor, training=False):
+        x = self.conv1(input_tensor, training=training)
+        x = self.maxpool1(x, training=training)
+        x = self.conv2(x, training=training)
+        x = self.maxpool2(x, training=training)
+        x = self.dropout1(x, training=training)
+        x = self.flatten(x, training=training)
+        x = self.dropout2(x, training=training)
+        x = self.hidden1(x, training=training)
+        if self.normalize:
+            x = self.norm(x)
+        preds = self.output_layer(x, training=training)
+        return preds
+
+    def get_last_hidden(self, input_tensor, training=False):
+        '''Get the last hidden layer before prediction.
+        '''
+        x = self.conv1(input_tensor, training=training)
+        x = self.maxpool1(x, training=training)
+        x = self.conv2(x, training=training)
+        x = self.maxpool2(x, training=training)
+        x = self.dropout1(x, training=training)
+        x = self.flatten(x, training=training)
+        x = self.dropout2(x, training=training)
+        x = self.hidden1(x, training=training)
+        if self.normalize:
+            x = self.norm(x)
+        return x
+
+
+# layers.Conv2D(filters=8, kernel_size=(3, 3), padding='same', input_shape=(16, 16, 1), activation='relu'),
+        # layers.MaxPooling2D(pool_size=(2, 2), padding='same'),
+        # layers.Conv2D(filters=16, kernel_size=(3, 3), padding='same', activation='relu'),
+        # layers.MaxPooling2D(pool_size=(2, 2), padding='same'),
+        # layers.Dropout(0.25),
+        # (5,5,16) > 400
+        # 生成一个一维向量
+        # layers.Flatten(),
+        # layers.Dense(256, activation='relu'),
+        # layers.Dropout(0.5),
+        # layers.Dense(128, activation='relu'),
+        # 全连接层：特征提取器，将学到的特征表示映射到样本的标记空间，全连接一般会把卷积输出的二维特征图转化成一维的一个向量
+        # layers.Dense(num_classes, activation='softmax'),
+class SimpleCNN(tf.keras.Model):
+    """
+    CNN with the same architecture to Encoder + Softmax/Regression output.
+    activation = 'relu', 'tanh'
+    """
+
+    def __init__(self, num_classes=8, normalize=True, regress=False, input_shape=(256,1), activation='relu'):
+        super(SimpleCNN, self).__init__(name='')
+        self.conv1 = tf.keras.layers.Conv2D(filters=8, kernel_size=(3, 3), padding='same', input_shape=input_shape, activation=activation)
+        self.maxpool1 = tf.keras.layers.MaxPool2D(pool_size=(2, 2), padding='same')
+        self.conv2 = tf.keras.layers.Conv2D(filters=16, kernel_size=(3, 3), padding='same', activation=activation),
+        self.maxpool2 = tf.keras.layers.MaxPool2D(pool_size=(2, 2), padding='same'),
+        self.dropout1 = tf.keras.layers.Dropout(0.25)
+        self.flatten = tf.keras.layers.Flatten()
+        self.dropout2 = tf.keras.layers.Dropout(0.5)
+        self.hidden1 = tf.keras.layers.Dense(256, activation=activation)
         self.normalize = normalize
         if self.normalize:
             self.norm = UnitNormLayer()

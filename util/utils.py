@@ -61,7 +61,7 @@ def save_model(model, name='', lis=None):
     if name == '':
         name = list_to_str(lis) + 'weights.h5'
     print(name)
-    model.save_weights('./output/model/' + name)
+    model.save_weights('./output/weight/' + name)
 
 
 def load_model(model, name='', lis=None):
@@ -69,7 +69,7 @@ def load_model(model, name='', lis=None):
         return
     if name == '':
         name = list_to_str(lis) + 'weights.h5'
-    model.load_weights('./output/model/' + name)
+    model.load_weights('./output/weight/' + name)
     return model
 
 def get_path():
@@ -194,7 +194,47 @@ def plt_index_of_model(epochs, loss, accuracy, val_loss, val_accuracy, title='Mo
     ax1.set_title(title + '- history')
 
     plt.legend()
-    plt.savefig(get_path() + title + '.jpg')
+    plt.savefig(get_path() + title + '.jpg', dpi=600)
+    plt.show()
+
+def plt_alpha(dim_set, alpha, mean_auroc, mean_fpr, title='Performance of different alpha'):
+    """
+    画VL方法
+    :param dim_set:
+    :param alpha:
+    :param mean_auroc:
+    :param val_loss:
+    :param mean_fpr:
+    :param title:
+    :return:
+    """
+    x = dim_set
+    fig = plt.figure()
+    ax1 = fig.add_subplot(111)
+    # fig, ax1 = plt.subplots()
+
+    ax1.set_xlabel('Dimension of subspace')
+    ax1.set_ylabel('Metrics')
+    ax1.tick_params('y', colors='r')
+    ax1.plot(x, mean_auroc, 'g+-', label='mean_auroc')
+    ax1.plot(x, mean_fpr, 'c.-', label='mean_fpr')
+
+    ax2 = ax1.twinx()
+    # ax2.plot(x, accuracy, 'g', label='accuracy')
+    # ax2.plot(x, val_accuracy, 'c', label='val_accuracy')
+    # ax2.plot(x, loss, 'r', label='loss')
+    # ax2.plot(x, val_loss, 'b', label='val_loss')
+    ax1.legend()
+    # ax1.grid()
+
+    ax2.set_ylabel('Alpha')
+    ax2.tick_params('y', colors='b')
+    ax2.plot(x, alpha, 'ro-', label='alpha')
+
+    ax1.set_title(title + '- history')
+
+    plt.legend()
+    plt.savefig(get_path() + title + '.jpg', dpi=600)
     plt.show()
 
 def plot_twin(_y1, _y2, _ylabel1, _ylabel2):
@@ -236,7 +276,7 @@ def plt_line(title, x_label, y_label, x, dict=None):
     plt.xlabel(x_label)
     plt.ylabel(y_label)
     plt.legend()
-    plt.savefig(get_path() + title + '.jpg')
+    plt.savefig(get_path() + title + '.jpg', dpi=600)
     plt.show()
 
 def plt_feat_importance(model, dim):

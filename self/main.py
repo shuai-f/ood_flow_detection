@@ -4,7 +4,7 @@ import numpy as np
 
 from contrast_learning.model import MLP, SimpleRNN, LSTM, GRU, CNN
 import self_dataset
-from ood_detection import LocalThreshold, VirtualLogit
+from util.ood_detection import LocalThreshold
 from util.utils import list_to_str
 
 def parse_option():
