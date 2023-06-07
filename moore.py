@@ -44,6 +44,22 @@ def init(num=1):
         numClasses = 8
         trainLabels = ['WWW', 'MAIL', 'FTP-CONTROL', 'FTP-PASV', 'ATTACK', 'SERVICES', 'DATABASE', 'FTP-DATA', ]
         oodLabels = ['MULTIMEDIA', 'P2P', 'INTERACTIVE', 'GAMES', ]
+    if num == 3:
+        numClasses = 8
+        trainLabels = ['WWW', 'MULTIMEDIA', 'FTP-CONTROL', 'FTP-PASV', 'ATTACK', 'SERVICES', 'DATABASE', 'FTP-DATA', ]
+        oodLabels = ['MAIL', 'P2P', 'INTERACTIVE', 'GAMES', ]
+    if num == 4:
+        numClasses = 8
+        trainLabels = ['WWW', 'MAIL', 'ATTACK', 'SERVICES', 'DATABASE', 'MULTIMEDIA', 'P2P', 'INTERACTIVE',]
+        oodLabels = [ 'FTP-CONTROL', 'FTP-PASV', 'FTP-DATA', 'GAMES', ]
+    if num == 5:
+        numClasses = 8
+        trainLabels = ['WWW', 'MULTIMEDIA', 'FTP-CONTROL', 'FTP-PASV', 'INTERACTIVE', 'P2P', 'SERVICES', 'FTP-DATA', ]
+        oodLabels = ['MAIL', 'DATABASE', 'ATTACK', 'GAMES', ]
+    if num == 6:
+        numClasses = 8
+        trainLabels = ['WWW', 'MULTIMEDIA', 'MAIL', 'FTP-PASV', 'INTERACTIVE', 'P2P', 'SERVICES', 'FTP-DATA', ]
+        oodLabels = ['FTP-CONTROL', 'DATABASE', 'ATTACK', 'GAMES', ]
 
     return numClasses, numPixels, trainLabels, oodLabels
 
@@ -142,7 +158,7 @@ def splits(model_set_label, ood_set_label, filename):
                 # 均值填充，加高斯白噪声
                 # x = [float(j) for j in i.split(',')[:-1]] + [meana] * 8 + np.random.normal(0, 1, 256)
                 x = [float(j) for j in i.split(',')[:-1]] + [0] * 8
-                x[0], x[1] = 0.0, 0.0
+                # x[0], x[1] = 0.0, 0.0
                 # x =x.tolist()
                 y = i.split(',')[-1].replace('FTP-CO0TROL', 'FTP-CONTROL')
                 y = y.replace('I0TERACTIVE', 'INTERACTIVE')
@@ -161,7 +177,8 @@ def splits(model_set_label, ood_set_label, filename):
 
 
 # data nomalization
-num_classes, num_pixels, train_labels, ood_labels = init(2)
+num = 6
+num_classes, num_pixels, train_labels, ood_labels = init(num)
 # train_x,train_y = data_prepross(['entry01.weka.allclass.arff',])
 total_x, total_y, ood_x, ood_y = splits(train_labels, ood_labels, [
     'entry01.weka.allclass.arff', 'entry02.weka.allclass.arff', 'entry03.weka.allclass.arff',

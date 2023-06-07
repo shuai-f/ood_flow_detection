@@ -2,7 +2,7 @@ import os
 import time
 
 import numpy as np
-from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt, axes
 from sklearn.metrics import confusion_matrix
 
 # Moore 数据集
@@ -145,22 +145,43 @@ def plt_image(trainx, trainy):
     plt.imshow(np.reshape(trainx[p_games], (16, 16)))
     plt.show()
 
-
+font_dict = {'family': 'Times New Roman',
+         # 'style': 'italic',
+         'weight': 'normal',
+        # 'color':  'darkred',
+        'size': 14,
+        }
 # 混淆矩阵
-def plot_confusion_matrix(title, test_y, pred_y, labels_name=labels):
+def plot_confusion_matrix(title, cm, labels_name=labels):
     # cm = confusion_matrix(test_y, np.argmax(pred_y, axis = 0))
-    cm = confusion_matrix(test_y, pred_y)  # > 0.5)
+    # cm = confusion_matrix(test_y, pred_y)  # > 0.5)
     print(cm)
     # labels_name = labels
     cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]  # 归一化
-    plt.imshow(cm, interpolation='nearest')  # 在特定的窗口上显示图像
-    plt.title(title)  # 图像标题
+    # print(cm)
+    cm = cm.T
+    plt.imshow(cm.T, interpolation='nearest', alpha=1.0)  # 在特定的窗口上显示图像
+
+    plt.title(title, font_dict)  # 图像标题
     plt.colorbar()
     num_local = np.array(range(len(labels_name)))
-    plt.xticks(num_local, labels_name, rotation=90)  # 将标签印在x轴坐标上
-    plt.yticks(num_local, labels_name)  # 将标签印在y轴坐标上
-    plt.ylabel('True')
-    plt.xlabel('Predicted')
+    plt.xticks(num_local, labels_name, rotation=30, fontsize=8.5, fontproperties = 'Times New Roman')  # 将标签印在x轴坐标上
+    plt.yticks(num_local, labels_name, rotation=20, fontsize=10, fontproperties = 'Times New Roman')  # 将标签印在y轴坐标上
+    for first_index in range(len(cm)):  # 第几行
+        for second_index in range(len(cm[first_index])):  # 第几列
+            temp = cm[first_index][second_index]
+            # if temp == 0.0 or temp == 100.0:
+            #     plt.text(first_index, second_index, int(temp), va='center',
+            #              ha='center',
+            #              fontsize=13.5)
+            # else:
+            plt.text(first_index, second_index, r'{0:.2f}'.format(temp), va='center',
+                     ha='center',
+                     fontproperties = 'Times New Roman',
+                     fontsize=12)
+    plt.ylabel('True', font_dict)
+    plt.xlabel('Predicted', font_dict)
+    plt.savefig(get_path() + title + '.jpg', dpi=1200)
     plt.show()
 
 
@@ -172,8 +193,8 @@ def plt_index_of_model(epochs, loss, accuracy, val_loss, val_accuracy, title='Mo
     ax1 = fig.add_subplot(111)
     # fig, ax1 = plt.subplots()
 
-    ax1.set_xlabel('Epochs')
-    ax1.set_ylabel('Acc/%')
+    ax1.set_xlabel('Epochs', font_dict)
+    ax1.set_ylabel('Acc', font_dict)
     ax1.tick_params('y', colors='r')
     ax1.plot(x, accuracy, 'g+-', label='accuracy')
     ax1.plot(x, val_accuracy, 'c.-', label='val_accuracy')
@@ -183,17 +204,17 @@ def plt_index_of_model(epochs, loss, accuracy, val_loss, val_accuracy, title='Mo
     # ax2.plot(x, val_accuracy, 'c', label='val_accuracy')
     # ax2.plot(x, loss, 'r', label='loss')
     # ax2.plot(x, val_loss, 'b', label='val_loss')
-    ax1.legend()
+    ax1.legend(loc=(2/3,1/3))
     # ax1.grid()
 
-    ax2.set_ylabel('Loss')
+    ax2.set_ylabel('Loss', font_dict)
     ax2.tick_params('y', colors='b')
     ax2.plot(x, loss, 'ro-', label='loss')
     ax2.plot(x, val_loss, 'b^-', label='val_loss')
 
-    ax1.set_title(title + '- history')
+    ax1.set_title(title, font_dict)
 
-    plt.legend()
+    ax2.legend(loc=(2/3,2/3))
     plt.savefig(get_path() + title + '.jpg', dpi=600)
     plt.show()
 
@@ -213,8 +234,8 @@ def plt_alpha(dim_set, alpha, mean_auroc, mean_fpr, title='Performance of differ
     ax1 = fig.add_subplot(111)
     # fig, ax1 = plt.subplots()
 
-    ax1.set_xlabel('Dimension of subspace')
-    ax1.set_ylabel('Metrics')
+    ax1.set_xlabel('Dimension of principal subspace', font_dict)
+    ax1.set_ylabel('Value', font_dict)
     ax1.tick_params('y', colors='r')
     ax1.plot(x, mean_auroc, 'g+-', label='mean_auroc')
     ax1.plot(x, mean_fpr, 'c.-', label='mean_fpr')
@@ -227,32 +248,14 @@ def plt_alpha(dim_set, alpha, mean_auroc, mean_fpr, title='Performance of differ
     ax1.legend()
     # ax1.grid()
 
-    ax2.set_ylabel('Alpha')
+    ax2.set_ylabel('Alpha', font_dict)
     ax2.tick_params('y', colors='b')
     ax2.plot(x, alpha, 'ro-', label='alpha')
 
-    ax1.set_title(title + '- history')
+    ax1.set_title(title, font_dict)
 
     plt.legend()
     plt.savefig(get_path() + title + '.jpg', dpi=600)
-    plt.show()
-
-def plot_twin(_y1, _y2, _ylabel1, _ylabel2):
-    fig, ax1 = plt.subplots()
-    color = 'tab:blue'
-    ax1.set_xlabel('time')
-    ax1.set_ylabel(_ylabel1, color=color)
-    ax1.plot(_y1, color=color)
-    ax1.tick_params(axis='y', labelcolor=color)
-
-    ax2 = ax1.twinx()  # 创建共用x轴的第二个y轴
-
-    color = 'tab:red'
-    ax2.set_ylabel(_ylabel2, color=color)
-    ax2.plot(_y2, color=color)
-    ax2.tick_params(axis='y', labelcolor=color)
-
-    fig.tight_layout()
     plt.show()
 
 #画折线图
@@ -267,14 +270,86 @@ def plt_line(title, x_label, y_label, x, dict=None):
         ['c--', 'c.-'],
     ]
     i = 0
+    fig = plt.figure(figsize=(7, 6))
+    a = fig.add_subplot(111)
+    # a = ax1.add_axes([0.1, 0.1, 0.8, 0.8])
     for key,value in dict.items():
-        plt.plot(x, value, color[i][0], label=key)
-        plt.plot(x, value, color[i][1],)
+        a.plot(x, value, color[i][0], label=key)
+        a.plot(x, value, color[i][1],)
         i += 1
     # plt.plot(x, loss, 'ro-', x, accuracy, 'g+-', x, val_loss, 'b^-', x, val_accuracy, 'c.-')
-    plt.title(title)
-    plt.xlabel(x_label)
-    plt.ylabel(y_label)
+    # a.set_ylim(0.98, 1.0)
+    a.set_title(title, font_dict)
+    a.set_xlabel(x_label, font_dict)
+    a.set_ylabel(y_label, font_dict)
+    plt.legend()
+    plt.savefig(get_path() + title + '.jpg', dpi=600)
+    plt.show()
+
+
+#画柱状图
+def plt_histogram(title, x_label, y_label, x, dict=None, threshold=14.321300293857709):
+    if dict is None:
+        print("折线图输入数据为空")
+        return
+    color = [
+        ['r--', 'r'],
+        ['g--', 'g'],
+        ['b--', 'b'],
+        ['c--', 'c'],
+    ]
+    i = 0
+    # ax3 = plt.subplot(2, 1, 2)
+    # plt.sca(ax3)
+    # x1 = [1, 5, 9, 13, 17, 21, 25, 29]  # x轴点效率位置
+    # x2 = [i + 1 for i in x1]  # x轴线效率位置
+    # x3 = [i + 2 for i in x1]  # x轴面效率位置
+    # y1 = [i[0] for i in rcount]  # y轴点效率位置
+    # y2 = [i[1] for i in rcount]  # y轴线效率位置
+    # y3 = [i[2] for i in rcount]  # y轴面效率位置
+    width = 0.2
+    x0 = list(range(len(x)))
+    for key,value in dict.items():
+        # plt.plot(x0, value, color[i][0], label=key)
+        if key == 'Local Threshold':
+            plt.plot(x0, value, color='b', linewidth=2, linestyle="--", label=key)
+        else :
+            plt.bar(x0, value, width=width, fc=color[i][1], tick_label=x, label=key)
+            plt.xticks(rotation=23, fontsize=10, fontproperties = 'Times New Roman')
+            i += 1
+            x0 = [i1 + width for i1 in x0]
+    line, = plt.plot(x0, [threshold] * len(x), color='c', linewidth=2, linestyle="--", label='Global Threshold')
+    # plt.plot(x, loss, 'ro-', x, accuracy, 'g+-', x, val_loss, 'b^-', x, val_accuracy, 'c.-')
+    plt.title(title, font_dict)
+    plt.xlabel(x_label, font_dict)
+    plt.ylabel(y_label, font_dict)
+    plt.legend()
+    plt.savefig(get_path() + title + '.jpg', dpi=600)
+    plt.show()
+
+def plt_metrics(title, x_label, y_label, x, dict=None,):
+    if dict is None:
+        print("折线图输入数据为空")
+        return
+    color = [
+        ['r--', 'r'],
+        ['g--', 'g'],
+        ['b--', 'b'],
+        ['c--', 'c'],
+    ]
+    i = 0
+    width = 0.2
+    x0 = list(range(len(x)))
+    for key,value in dict.items():
+        plt.bar(x0, value, width=width, fc=color[i][1], tick_label=x, label=key)
+        plt.xticks(rotation=30, fontproperties = 'Times New Roman')
+        plt.yticks(fontproperties = 'Times New Roman')
+        i += 1
+        x0 = [i1 + width for i1 in x0]
+    # plt.plot(x, loss, 'ro-', x, accuracy, 'g+-', x, val_loss, 'b^-', x, val_accuracy, 'c.-')
+    plt.title(title, font_dict)
+    plt.xlabel(x_label, font_dict)
+    plt.ylabel(y_label, font_dict)
     plt.legend()
     plt.savefig(get_path() + title + '.jpg', dpi=600)
     plt.show()
@@ -288,6 +363,6 @@ def plt_feat_importance(model, dim):
     plt.figure()
     plt.title("Feature importances")
     plt.bar(range(num_features), importances[indices], color="blue", align="center")
-    plt.xticks(range(num_features), [features[i] for i in indices], rotation=30)
+    plt.xticks(range(num_features), [features[i] for i in indices], rotation=30, fontproperties = 'Times New Roman')
     plt.xlim([-1, num_features])
     plt.show()

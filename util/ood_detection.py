@@ -7,7 +7,7 @@ import numpy as np
 import tensorflow as tf
 import torch
 from scipy import integrate
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, accuracy_score
 from tensorflow import Tensor
 from numpy.linalg import pinv, norm
 from sklearn.covariance import EmpiricalCovariance
@@ -17,8 +17,10 @@ import pandas as pd
 from tqdm import tqdm
 
 import util.utils
+from util import utils
 from util.metrics import fpr_recall, auc
-from util.ood_func import energy_score, msp_score, maxlogit_socre, nusa_score, odin_score, residual_score
+from util.ood_func import energy_score, msp_score, maxlogit_socre, nusa_score, odin_score, residual_score, vl_score, \
+    get_vl_param, mahalanobis_score, get_mean_conv, residual_score_
 from util.utils import list_to_str, plt_line, plt_alpha
 
 def Msp(val_x, val_y, ood_x, ood_y, model, train_labels, ood_labels):
@@ -129,7 +131,7 @@ def VirtualLogit(feature_oods, ood_y, feature_id_train, train_y, feature_id_val,
 
     df = pd.DataFrame(columns=['method', 'oodset', 'auroc', 'fpr'])
     dfs = []
-    tpr = 0.95  # 召回率
+    recall = 0.95  # 召回率
     name = util.utils.list_to_str(ood_labels)  # ood class
 
     print("MSP : ==============================")
@@ -139,7 +141,7 @@ def VirtualLogit(feature_oods, ood_y, feature_id_train, train_y, feature_id_val,
     for name, softmax_ood in softmax_oods.items():
         score_ood = softmax_ood.max(axis=-1)
         auc_ood = auc(score_id, score_ood)[0]
-        fpr_ood, _ = fpr_recall(score_id, score_ood, tpr)
+        fpr_ood, _ = fpr_recall(score_id, score_ood, recall)
         result.append(dict(method=method, oodset=name, auroc=auc_ood, fpr=fpr_ood))
         print(f'{method}: {name} auroc {auc_ood:.2%}, fpr {fpr_ood:.2%}')
     df = pd.DataFrame(result)
@@ -152,7 +154,7 @@ def VirtualLogit(feature_oods, ood_y, feature_id_train, train_y, feature_id_val,
     for name, logit_ood in logit_oods.items():
         score_ood = logit_ood.max(axis=-1)
         auc_ood = auc(score_id, score_ood)[0]
-        fpr_ood, _ = fpr_recall(score_id, score_ood, tpr)
+        fpr_ood, _ = fpr_recall(score_id, score_ood, recall)
         result.append(dict(method=method, oodset=name, auroc=auc_ood, fpr=fpr_ood))
         print(f'{method}: {name} auroc {auc_ood:.2%}, fpr {fpr_ood:.2%}')
     df = pd.DataFrame(result)
@@ -165,7 +167,7 @@ def VirtualLogit(feature_oods, ood_y, feature_id_train, train_y, feature_id_val,
     for name, logit_ood in logit_oods.items():
         score_ood = logsumexp(logit_ood, axis=-1)
         auc_ood = auc(score_id, score_ood)[0]
-        fpr_ood, _ = fpr_recall(score_id, score_ood, tpr)
+        fpr_ood, _ = fpr_recall(score_id, score_ood, recall)
         result.append(dict(method=method, oodset=name, auroc=auc_ood, fpr=fpr_ood))
         print(f'{method}: {name} auroc {auc_ood:.2%}, fpr {fpr_ood:.2%}')
     df = pd.DataFrame(result)
@@ -185,7 +187,7 @@ def VirtualLogit(feature_oods, ood_y, feature_id_train, train_y, feature_id_val,
         logit_ood_clip = np.clip(feature_ood, a_min=None, a_max=clip) @ w.T + b
         score_ood = logsumexp(logit_ood_clip, axis=-1)
         auc_ood = auc(score_id, score_ood)[0]
-        fpr_ood, _ = fpr_recall(score_id, score_ood, tpr)
+        fpr_ood, _ = fpr_recall(score_id, score_ood, recall)
         result.append(dict(method=method, oodset=name, auroc=auc_ood, fpr=fpr_ood))
         print(f'{method}: {name} auroc {auc_ood:.2%}, fpr {fpr_ood:.2%}')
     df = pd.DataFrame(result)
@@ -194,8 +196,8 @@ def VirtualLogit(feature_oods, ood_y, feature_id_train, train_y, feature_id_val,
     print("Residual : ============================")
     method = 'Residual'
     # DIM = 1000 if feature_id_val.shape[-1] >= 2048 else 512
-    DIM = 0
-    while DIM <= feature_id_train.shape[1] * 5 // 6:
+    DIM = 100
+    while DIM == 100:
         result = []
         # 重新定义原点为  o := - (wT)+  * b ；Moore-Penrose
         u = -np.matmul(pinv(w), b)
@@ -213,20 +215,55 @@ def VirtualLogit(feature_oods, ood_y, feature_id_train, train_y, feature_id_val,
             # logit_ood = logit_oods[name]
             score_ood = -norm(np.matmul(feature_ood - u, NS), axis=-1)
             auc_ood = auc(score_id, score_ood)[0]
-            fpr_ood, _ = fpr_recall(score_id, score_ood, tpr)
+            fpr_ood, _ = fpr_recall(score_id, score_ood, recall)
             result.append(dict(method=method + "-DIM:" + str(DIM), oodset=name, auroc=auc_ood, fpr=fpr_ood))
             print(f'{method}: {name} auroc {auc_ood:.2%}, fpr {fpr_ood:.2%}')
         df = pd.DataFrame(result)
         dfs.append(df)
         DIM += 20
 
+    print("Mahalanobis : ==================================")
+    method = 'Mahalanobis'
+    result = []
+
+    # train_labels = np.array([int(line.rsplit(' ', 1)[-1]) for line in train_labels], dtype=int)
+    print('computing classwise mean feature...')
+    train_means = []
+    train_feat_centered = []
+    for i in tqdm(range(len(train_labels))):  # 进度条库
+        # fs = [feature_id_train[y_i] for y_i in range(train_y.shape[0]) if train_y[y_i] == i]
+        # fs = feature_id_train[np.argwhere(train_y == i)]
+        fs = feature_id_train[train_y == i]
+        _m = fs.mean(axis=0)
+        train_means.append(_m)
+        train_feat_centered.extend(fs - _m)
+
+    print('computing precision matrix...')
+    ec = EmpiricalCovariance(assume_centered=True)
+    ec.fit(np.array(train_feat_centered).astype(np.float64))
+
+    mean = torch.from_numpy(np.array(train_means)).cpu().float()
+    prec = torch.from_numpy(ec.precision_).cpu().float()
+
+    score_id = -np.array([(((f - mean) @ prec) * (f - mean)).sum(axis=-1).min().cpu().item() for f in
+                          tqdm(torch.from_numpy(feature_id_val).cpu().float())])
+    for name, feature_ood in feature_oods.items():
+        score_ood = -np.array([(((f - mean) @ prec) * (f - mean)).sum(axis=-1).min().cpu().item() for f in
+                               tqdm(torch.from_numpy(feature_ood).cpu().float())])
+        auc_ood = auc(score_id, score_ood)[0]
+        fpr_ood, _ = fpr_recall(score_id, score_ood, recall)
+        result.append(dict(method=method, oodset=name, auroc=auc_ood, fpr=fpr_ood))
+        print(f'{method}: {name} auroc {auc_ood:.2%}, fpr {fpr_ood:.2%}')
+    df = pd.DataFrame(result)
+    dfs.append(df)
+
     print("Virtual Logit : ==================================")
     method = 'Virtual Logit'
     # 256维特征
-    DIM = 0
+    DIM = 20
     fpr_result, auroc_result, alpha_list = {},{},{'alpha':[], 'mean_auroc':[], 'mean_fpr':[]}
     DIM_set = []
-    while DIM <= feature_id_train.shape[1] * 5 // 6:
+    while DIM < min(feature_id_train.shape[1] * 5 // 6, 65):
         result = []
         # 重新定义原点为  o := - (wT)+  * b ；Moore-Penrose
         u = -np.matmul(pinv(w), b)
@@ -265,7 +302,7 @@ def VirtualLogit(feature_oods, ood_y, feature_id_train, train_y, feature_id_val,
             # print(vlogit_ood,energy_ood) # shape = (n, )
             score_ood = -vlogit_ood + energy_ood
             auc_ood = auc(score_id, score_ood)[0]
-            fpr_ood, _ = fpr_recall(score_id, score_ood, tpr)
+            fpr_ood, _ = fpr_recall(score_id, score_ood, recall)
             result.append(dict(method=method + '-DIM:' + str(DIM), oodset=name, auroc=auc_ood, fpr=fpr_ood))
             print(f'{method}: {name} auroc {auc_ood:.2%}, fpr {fpr_ood:.2%}')
             if auroc_result.get(name) is None:
@@ -283,47 +320,12 @@ def VirtualLogit(feature_oods, ood_y, feature_id_train, train_y, feature_id_val,
         alpha_list['mean_fpr'].append(df.fpr.mean())
     # plt_line('Performance of different DIM', 'DIM', 'AUROC', DIM_set, ood_result)
     # 画折线图
-    plt_line('Auroc of different DIM', 'DIM', 'AUROC', DIM_set, auroc_result)
+    plt_line('AUROC of Different DIM', 'DIM', 'Value', DIM_set, auroc_result)
 
-    plt_line('Fpr of different DIM', 'DIM', 'FPR', DIM_set, fpr_result)
+    plt_line('FPR95 of Different DIM', 'DIM', 'Value', DIM_set, fpr_result)
 
-    plt_alpha(DIM_set, alpha_list['alpha'], alpha_list['mean_auroc'], alpha_list['mean_fpr'],'Mean performance of different alpha')
+    plt_alpha(DIM_set, alpha_list['alpha'], alpha_list['mean_auroc'], alpha_list['mean_fpr'],'Mean Metrics of Different DIM')
 
-
-    # df.to_csv("./output/splits/splits_2/preference.csv")
-    print("Mahalanobis : ==================================")
-    method = 'Mahalanobis'
-    result = []
-
-    # train_labels = np.array([int(line.rsplit(' ', 1)[-1]) for line in train_labels], dtype=int)
-    print('computing classwise mean feature...')
-    train_means = []
-    train_feat_centered = []
-    for i in tqdm(range(8)): # 进度条库
-        # fs = [feature_id_train[y_i] for y_i in range(train_y.shape[0]) if train_y[y_i] == i]
-        fs = feature_id_train[train_y == i]
-        _m = fs.mean(axis=0)
-        train_means.append(_m)
-        train_feat_centered.extend(fs - _m)
-
-    print('computing precision matrix...')
-    ec = EmpiricalCovariance(assume_centered=True)
-    ec.fit(np.array(train_feat_centered).astype(np.float64))
-
-    mean = torch.from_numpy(np.array(train_means)).cpu().float()
-    prec = torch.from_numpy(ec.precision_).cpu().float()
-
-    score_id = -np.array([(((f - mean) @ prec) * (f - mean)).sum(axis=-1).min().cpu().item() for f in
-                          tqdm(torch.from_numpy(feature_id_val).cpu().float())])
-    for name, feature_ood in feature_oods.items():
-        score_ood = -np.array([(((f - mean) @ prec) * (f - mean)).sum(axis=-1).min().cpu().item() for f in
-                               tqdm(torch.from_numpy(feature_ood).cpu().float())])
-        auc_ood = auc(score_id, score_ood)[0]
-        fpr_ood, _ = fpr_recall(score_id, score_ood, tpr)
-        result.append(dict(method=method, oodset=name, auroc=auc_ood, fpr=fpr_ood))
-        print(f'{method}: {name} auroc {auc_ood:.2%}, fpr {fpr_ood:.2%}')
-    df = pd.DataFrame(result)
-    dfs.append(df)
 
     write_df(dfs, ood_labels)
 
@@ -340,9 +342,9 @@ def write_df(dfs, ood_labels):
         _preference = ""
         for i in ood_labels:
             _str += i + ',,'
-            _preference += "auroc,fpr,"
+            _preference += "auroc/%,fpr/%,"
         f.write(",oodset," + _str + "Average,,\n")
-        f.write("num,method," + _preference + 'auroc,fpr\n')
+        f.write("num,method," + _preference + 'auroc/%,fpr/%\n')
         # for column in range(len(ood_labels)):
         #     for i in range(0, len(dfs)):
         #         df = dfs[i].iloc[column]  # 获取第一行数据
@@ -359,9 +361,9 @@ def write_df(dfs, ood_labels):
                     if ood_dataset == df_line.oodset:
                         auroc += df_line.auroc
                         fpr += df_line.fpr
-                        template += "%.2f%%,%.2f%%," %(df_line.auroc * 100, df_line.fpr * 100)
+                        template += "%.2f,%.2f," %(df_line.auroc * 100, df_line.fpr * 100)
                         continue
-            template += "%.2f%%,%.2f%%,\n" %(auroc * 100 / len_ood, fpr * 100 / len_ood)
+            template += "%.2f,%.2f,\n" %(auroc * 100 / len_ood, fpr * 100 / len_ood)
             print(template)
             f.write(template)
 
@@ -373,10 +375,14 @@ def estimate_best_threshold(seen_m_dist: np.ndarray,
     a best threshold (i.e. achieving best f1 in valid set) for test set.
     """
     lst = []
+    seen, unseen = 0, 0
     for item in seen_m_dist:
         lst.append((item, "seen"))
+        seen += float(item)
     for item in unseen_m_dist:
         lst.append((item, "unseen"))
+        unseen += float(item)
+
     # sort by m_dist: [(5.65, 'seen'), (8.33, 'seen'), ..., (854.3, 'unseen')]
     lst = sorted(lst, key=lambda item: item[0])
 
@@ -386,6 +392,7 @@ def estimate_best_threshold(seen_m_dist: np.ndarray,
     def compute_f1(tp, fp, fn):
         p = tp / (tp + fp + 1e-10)
         r = tp / (tp + fn + 1e-10)
+        # return p
         return (2 * p * r) / (p + r + 1e-10)
 
     def compute_auroc(tp, fp, fn, tn):
@@ -395,7 +402,7 @@ def estimate_best_threshold(seen_m_dist: np.ndarray,
         return auc_roc
 
     f1 = compute_f1(tp, fp, fn)
-    # auroc = compute_auroc(tp, fp, fn, tn)
+    # f1 = compute_auroc(tp, fp, fn, tn)
 
     for m_dist, label in lst:   #
         if label == "seen":  # fp -> tn
@@ -406,10 +413,23 @@ def estimate_best_threshold(seen_m_dist: np.ndarray,
             fn += 1
         if compute_f1(tp, fp, fn) > f1:
             f1 = compute_f1(tp, fp, fn)
+        # if compute_auroc(tp, fp, fn, tn) > f1:
+        #     f1 = compute_auroc(tp, fp, fn, tn)
             threshold = m_dist + plus
 
+    if len(seen_m_dist) != 0 and len(unseen_m_dist) != 0:
+        seen_t, unseen_t = seen / len(seen_m_dist), unseen / len(unseen_m_dist)
+    elif len(seen_m_dist) == 0 and len(unseen_m_dist) == 0:
+        seen_t, unseen_t = 0, 0
+    elif len(seen_m_dist) == 0:
+        seen_t, unseen_t = 0, unseen / len(unseen_m_dist)
+    else:
+        seen_t, unseen_t = seen / len(seen_m_dist), 0
+    lis = [float(threshold), seen_t, unseen_t]
+    with open('./output/CL/local threshold.csv', 'a') as f:
+        f.write('{},{},{}\n'.format(float(threshold), seen_t, unseen_t))
     # print("estimated threshold:", threshold)
-    print("local f1 {}, seen {}, unseen {}, threshold {}".format(f1, len(seen_m_dist), len(unseen_m_dist), threshold))
+    print("local f1 {}, seen {}, unseen {}, threshold {}".format(f1, len(seen_m_dist), len(unseen_m_dist), lis))
     return threshold
 
 def get_score(cm):
@@ -430,6 +450,20 @@ def get_score(cm):
         ps.append(p * 100)
         rs.append(r * 100)
 
+    TP = 0
+    sum = 0
+    for idx in range(n_class):
+        TP += cm[idx][idx]
+        sum += cm[idx].sum()
+    a = round(TP / sum * 100, 2)
+    TP = 0
+    sum = 0
+    for idx in range(n_class - 1):
+        TP += cm[idx][idx]
+        sum += cm[idx].sum()
+    a_seen = round(TP / sum * 100, 2)
+    a_unseen = round(cm[n_class - 1][n_class - 1] / cm[n_class - 1].sum() * 100, 2)
+
     f = np.mean(fs).round(2)
     p = np.mean(ps).round(2)
     r = np.mean(rs).round(2)
@@ -439,15 +473,43 @@ def get_score(cm):
     p_unseen = round(ps[-1], 2)
     r_unseen = round(rs[-1], 2)
     f_unseen = round(fs[-1], 2)
-    print(f"Overall(macro): , f:{f},  p:{p}, r:{r}")
-    print(f"Seen(macro): , f:{f_seen}, p:{p_seen}, r:{r_seen}")
-    print(f"=====> Unseen <=====: , f:{f_unseen}, p:{p_unseen}, r:{r_unseen}\n")
+    print(f"Overall(macro): , f:{f},  p:{p}, r:{r}, a:{a}")
+    print(f"Seen(macro): , f:{f_seen}, p:{p_seen}, r:{r_seen}, a:{a_seen}")
+    print(f"=====> Unseen <=====: , f:{f_unseen}, p:{p_unseen}, r:{r_unseen}, a:{a_unseen}\n")
 
-    return f, f_seen,  p_seen, r_seen, f_unseen,  p_unseen, r_unseen
 
+    return f, p, r, a, f_seen,  p_seen, r_seen, a_seen, f_unseen,  p_unseen, r_unseen, a_unseen
+
+
+def cal_confused_map(train_labels, train_y, pred_y, max_softmax):
+    # predict_y = model.predict(X_train)
+    # max_softmax = np.max(predict_y, axis=1)
+    accuracy = accuracy_score(train_y, pred_y, )
+    print("accuracy : %.2f%%" % (accuracy * 100))
+    # 混淆对
+    res = [i for i in range(len(pred_y)) if pred_y[i] != train_y[i]]
+    print("src -> tgt: ")
+    print([[(train_labels[train_y[i]], train_labels[pred_y[i]]), max_softmax[i]] for i in res])
+    confused_map = {}
+    for i in res:
+        if confused_map.get((train_labels[train_y[i]], train_labels[pred_y[i]])) is None:
+            confused_map[(train_labels[train_y[i]], train_labels[pred_y[i]])] = [max_softmax[i]]
+        else:
+            confused_map[(train_labels[train_y[i]], train_labels[pred_y[i]])].append(max_softmax[i])
+    with open('./output/CL/confused_label.csv', 'w') as f:
+        f.write("src_label,tgt_label,num,val_prob\n")
+        for key, value in confused_map.items():
+            f.write("{},{},{},{}\n".format(key[0], key[1], len(value), np.mean(value)))
+    # 容易混淆类别，区分
+    confused_labels = set()
+    for i in res:
+        confused_labels.add(train_y[i])
+        confused_labels.add(pred_y[i])
+    print("confused label set :")
+    print(confused_labels)  # all 混淆
 
 def LocalThreshold(feature_oods, ood_y, feature_id_train, train_y, feature_id_val, val_y,
-                 model, w, b, train_labels: list, ood_labels: list, ood_func=energy_score, T=1.0):
+                 model, w, b, train_labels: list, ood_labels: list, ood_func=energy_score, T=1.0, DIM=100):
     """
     局部阈值
     :return:
@@ -479,13 +541,34 @@ def LocalThreshold(feature_oods, ood_y, feature_id_train, train_y, feature_id_va
         score_id_val = ood_func(logit_id_val)
         score_ood = ood_func(logit_oods)
     elif ood_func == residual_score:
-        score_id_train = ood_func(logit_id_train, feature_id_train)
-        score_id_val = ood_func(logit_id_val, feature_id_val)
-        score_ood = ood_func(logit_oods, feature_oods)
-    elif ood_func == odin_score:
         score_id_train = ood_func(logit_id_train, feature_id_train, w, b)
         score_id_val = ood_func(logit_id_val, feature_id_val, w, b)
         score_ood = ood_func(logit_oods, feature_oods, w, b)
+    elif ood_func == odin_score:
+        clip_quantile = 0.99
+        clip = np.quantile(feature_id_train, clip_quantile)
+        print(f'clip quantile {clip_quantile}, clip {clip:.4f}')
+        score_id_train = ood_func(feature_id_train, clip, w, b)
+        score_id_val = ood_func(feature_id_val, clip, w, b)
+        score_ood = ood_func(feature_oods, clip, w, b)
+    elif ood_func == vl_score:
+        # for DIM in np.arange(0, 120, 5):
+        # DIM = 100
+        alpha, NS, u = get_vl_param(feature_id_train, logit_id_train, DIM, w, b)
+        score_id_train = ood_func(logit_id_train, feature_id_train, alpha, NS, u)
+        score_id_val = ood_func(logit_id_val, feature_id_val, alpha, NS, u)
+        score_ood = ood_func(logit_oods, feature_oods, alpha, NS, u)
+    elif ood_func == residual_score_:
+        # DIM = 65
+        alpha, NS, u = get_vl_param(feature_id_train, logit_id_train, DIM, w, b)
+        score_id_train = ood_func(feature_id_train, NS, u)
+        score_id_val = ood_func(feature_id_val, NS, u)
+        score_ood = ood_func(feature_oods, NS, u)
+    elif ood_func == mahalanobis_score:
+        mean, conv = get_mean_conv(feature_id_train, train_y, train_labels)
+        score_id_train = ood_func(feature_id_train, mean, conv)
+        score_id_val = ood_func(feature_id_val, mean, conv)
+        score_ood = ood_func(feature_oods, mean, conv)
     else:
         print("Unknown ood func")
         return
@@ -498,7 +581,12 @@ def LocalThreshold(feature_oods, ood_y, feature_id_train, train_y, feature_id_va
     y_pred_id_val = np.argmax(softmax_id_val, axis=-1)
     y_pred_ood = np.argmax(softmax_oods, axis=-1)
 
+    # 计算原始模型分类混淆情况
+    # cal_confused_map(train_labels, train_y, y_pred_id_train, np.max(softmax_id_train, axis=1))
+
     # val and ood set y_true
+    trainLabel = copy.deepcopy(train_labels)
+    trainLabel.append('OOD')
     y_true_all = np.append(val_y, np.array([len(train_labels)] * len(feature_oods)))
     # 原始模型输出矩阵
     print("origin model predict : ")
@@ -510,25 +598,27 @@ def LocalThreshold(feature_oods, ood_y, feature_id_train, train_y, feature_id_va
     # print(confusion_matrix(y_true_all, y_pred))
     # 原矩阵
     cm = confusion_matrix(y_true_all, y_pred_all)
-    print(cm)
+    # utils.plot_confusion_matrix('origin model predict', y_true_all, y_pred_all, trainLabel)
 
-    plus_ = [1e-10, 1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1]
-    for plus in plus_:
-        # 训练集和分布外数据评估一个最佳全局阈值
-        ori_better_threshold = estimate_best_threshold(score_id_train, score_ood, plus)
-        print("origin global threshold : {}".format(ori_better_threshold))
-        print("model predict under global threshold :")
-        y_val = copy.deepcopy(y_pred_id_val)
-        y_ood = copy.deepcopy(y_pred_ood)
-        y_pred_val_score_threshold = score_id_val - ori_better_threshold
-        y_val[np.where(y_pred_val_score_threshold > 0)] = len(train_labels)
-        y_pred_ood_score_threshold = score_ood - ori_better_threshold
-        y_ood[np.where(y_pred_ood_score_threshold > 0)] = len(train_labels)
-        y_pred_all = np.append(y_val, y_ood)
-        cm = confusion_matrix(y_true_all, y_pred_all)
-        print(cm)
-        print("f, f_seen, p_seen, r_seen, f_unseen, p_unseen, r_unseen")
-        get_score(cm)
+    # 训练集和分布外数据评估一个最佳全局阈值
+    ori_better_threshold = estimate_best_threshold(score_id_train, score_ood)
+    print("origin global threshold : {}".format(ori_better_threshold))
+    print("model predict under global threshold :")
+    y_val = copy.deepcopy(y_pred_id_val)
+    y_ood = copy.deepcopy(y_pred_ood)
+    y_pred_val_score_threshold = score_id_val - ori_better_threshold
+    y_val[np.where(y_pred_val_score_threshold > 0)] = len(train_labels)
+    y_pred_ood_score_threshold = score_ood - ori_better_threshold
+    y_ood[np.where(y_pred_ood_score_threshold > 0)] = len(train_labels)
+    y_pred_all = np.append(y_val, y_ood)
+    cm = confusion_matrix(y_true_all, y_pred_all)
+    utils.plot_confusion_matrix('model predict under global threshold', cm, trainLabel)
+    with open('./output/CL/diff_metrics.csv', 'a') as f:
+        scores = get_score(cm)
+        # f.write('method,f,p,r,a,f_seen,p_seen,r_seen,a_seen,f_unseen,p_unseen,r_unseen,a_unseen')
+        f.write('\n{}'.format(ood_func))
+        for i in scores:
+            f.write(',{}'.format(i))
 
     print("model predict under local threshold :")
     y_pred_val_thresholds = copy.deepcopy(y_pred_id_val)
@@ -536,8 +626,8 @@ def LocalThreshold(feature_oods, ood_y, feature_id_train, train_y, feature_id_va
     thresholds = {}
     # 计算局部阈值
     for label in range(len(train_labels)):
-        ypred_val_indexs = np.argwhere(y_pred_id_train == label)
-        ypred_val_score = score_id_train[ypred_val_indexs]
+        ypred_val_indexs = np.argwhere(y_pred_id_val == label)
+        ypred_val_score = score_id_val[ypred_val_indexs]
         ypred_ood_indexs = np.argwhere(y_pred_ood == label)
         # print(ypred_ood_indexs, len(ypred_ood_indexs))
         ypred_ood_score = score_ood[ypred_ood_indexs]
@@ -559,7 +649,10 @@ def LocalThreshold(feature_oods, ood_y, feature_id_train, train_y, feature_id_va
     # 取验证集和ood_set
     y_pred_all = np.append(y_pred_id_val, y_pred_ood)
     cm = confusion_matrix(y_true_all, y_pred_all)
-    print(cm)
-    print("f, f_seen, p_seen, r_seen, f_unseen, p_unseen, r_unseen")
-    print(get_score(cm))
+    utils.plot_confusion_matrix('model predict under local threshold', cm, trainLabel)
+    with open('./output/CL/diff_metrics.csv', 'a') as f:
+        scores = get_score(cm)
+        f.write('\n{}'.format(ood_func))
+        for i in scores:
+            f.write(',{}'.format(i))
 

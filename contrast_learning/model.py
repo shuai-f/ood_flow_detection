@@ -31,14 +31,14 @@ class Encoder(tf.keras.Model):
     '''An encoder network, E(·), which maps an augmented image x to a representation vector, r = E(x) ∈ R^{DE}
     '''
 
-    def __init__(self, normalize=True, activation='relu'):
+    def __init__(self, n=128, normalize=True, activation='relu'):
         super(Encoder, self).__init__(name='')
         if activation == 'leaky_relu':
             self.hidden1 = DenseLeakyReluLayer(256)
-            self.hidden2 = DenseLeakyReluLayer(256)
+            self.hidden2 = DenseLeakyReluLayer(n)
         else:
             self.hidden1 = tf.keras.layers.Dense(256, activation=activation)
-            self.hidden2 = tf.keras.layers.Dense(256, activation=activation)
+            self.hidden2 = tf.keras.layers.Dense(n, activation=activation)
 
         self.normalize = normalize
         if self.normalize:
@@ -49,7 +49,6 @@ class Encoder(tf.keras.Model):
         x = self.hidden2(x, training=training)
         if self.normalize:
             x = self.norm(x)
-        print("Decode : {}".format(x))
         return x
 
 class EncoderCNN(tf.keras.Model):
@@ -58,7 +57,7 @@ class EncoderCNN(tf.keras.Model):
     activation = 'relu', 'tanh'
     """
 
-    def __init__(self, num_classes=8, normalize=True, regress=False, input_shape=(256,1), activation='relu'):
+    def __init__(self, projection_dim=128, normalize=True, regress=False, input_shape=(256,1), activation='relu'):
         super(EncoderCNN, self).__init__(name='')
         self.conv1 = tf.keras.layers.Conv1D(100, 2, padding='valid', activation='relu', input_shape=input_shape)
         self.maxpool1 = tf.keras.layers.MaxPool1D(pool_size=2)
@@ -67,7 +66,7 @@ class EncoderCNN(tf.keras.Model):
         self.dropout1 = tf.keras.layers.Dropout(0.25)
         self.flatten = tf.keras.layers.Flatten()
         self.dropout2 = tf.keras.layers.Dropout(0.5)
-        self.hidden1 = tf.keras.layers.Dense(128, activation=activation)
+        self.hidden1 = tf.keras.layers.Dense(projection_dim, activation=activation)
         self.normalize = normalize
         if self.normalize:
             self.norm = UnitNormLayer()
@@ -95,10 +94,10 @@ class Projector(tf.keras.Model):
         super(Projector, self).__init__(name='')
         if activation == 'leaky_relu':
             self.dense = DenseLeakyReluLayer(256)
-            self.dense2 = DenseLeakyReluLayer(256)
+            self.dense2 = DenseLeakyReluLayer(n)
         else:
             self.dense = tf.keras.layers.Dense(256, activation=activation)
-            self.dense2 = tf.keras.layers.Dense(256, activation=activation)
+            self.dense2 = tf.keras.layers.Dense(n, activation=activation)
 
         self.normalize = normalize
         if self.normalize:
@@ -293,9 +292,9 @@ class CNN(tf.keras.Model):
 
     def __init__(self, num_classes=8, normalize=True, regress=False, input_shape=(256,1), activation='relu'):
         super(CNN, self).__init__(name='')
-        self.conv1 = tf.keras.layers.Conv1D(100, 2, padding='valid', activation='relu', input_shape=input_shape)
+        self.conv1 = tf.keras.layers.Conv1D(100, 2, padding='valid', activation=activation, input_shape=input_shape)
         self.maxpool1 = tf.keras.layers.MaxPool1D(pool_size=2)
-        self.conv2 = tf.keras.layers.Conv1D(100, 2, padding='valid', activation='relu')
+        self.conv2 = tf.keras.layers.Conv1D(100, 2, padding='valid', activation=activation)
         self.maxpool2 = tf.keras.layers.MaxPool1D(pool_size=2)
         self.dropout1 = tf.keras.layers.Dropout(0.25)
         self.flatten = tf.keras.layers.Flatten()
@@ -339,20 +338,6 @@ class CNN(tf.keras.Model):
             x = self.norm(x)
         return x
 
-
-# layers.Conv2D(filters=8, kernel_size=(3, 3), padding='same', input_shape=(16, 16, 1), activation='relu'),
-        # layers.MaxPooling2D(pool_size=(2, 2), padding='same'),
-        # layers.Conv2D(filters=16, kernel_size=(3, 3), padding='same', activation='relu'),
-        # layers.MaxPooling2D(pool_size=(2, 2), padding='same'),
-        # layers.Dropout(0.25),
-        # (5,5,16) > 400
-        # 生成一个一维向量
-        # layers.Flatten(),
-        # layers.Dense(256, activation='relu'),
-        # layers.Dropout(0.5),
-        # layers.Dense(128, activation='relu'),
-        # 全连接层：特征提取器，将学到的特征表示映射到样本的标记空间，全连接一般会把卷积输出的二维特征图转化成一维的一个向量
-        # layers.Dense(num_classes, activation='softmax'),
 class SimpleCNN(tf.keras.Model):
     """
     CNN with the same architecture to Encoder + Softmax/Regression output.
@@ -361,10 +346,10 @@ class SimpleCNN(tf.keras.Model):
 
     def __init__(self, num_classes=8, normalize=True, regress=False, input_shape=(256,1), activation='relu'):
         super(SimpleCNN, self).__init__(name='')
-        self.conv1 = tf.keras.layers.Conv2D(filters=8, kernel_size=(3, 3), padding='same', input_shape=input_shape, activation=activation)
-        self.maxpool1 = tf.keras.layers.MaxPool2D(pool_size=(2, 2), padding='same')
-        self.conv2 = tf.keras.layers.Conv2D(filters=16, kernel_size=(3, 3), padding='same', activation=activation),
-        self.maxpool2 = tf.keras.layers.MaxPool2D(pool_size=(2, 2), padding='same'),
+        self.conv1 = tf.keras.layers.Conv1D(filters=8, kernel_size=3, padding='same', input_shape=input_shape, activation=activation)
+        self.maxpool1 = tf.keras.layers.MaxPool1D(pool_size=2, padding='same')
+        self.conv2 = tf.keras.layers.Conv1D(filters=16, kernel_size=3, padding='same', activation=activation)
+        self.maxpool2 = tf.keras.layers.MaxPool1D(pool_size=2, padding='same')
         self.dropout1 = tf.keras.layers.Dropout(0.25)
         self.flatten = tf.keras.layers.Flatten()
         self.dropout2 = tf.keras.layers.Dropout(0.5)
